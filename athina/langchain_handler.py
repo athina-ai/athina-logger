@@ -23,9 +23,9 @@ from .inference_logger import InferenceLogger
 
 
 class CallbackHandler(BaseCallbackHandler):
-    '''
+    """
     Callback handler for the LangChain API.
-    '''
+    """
 
     def __init__(
         self,
@@ -37,7 +37,7 @@ class CallbackHandler(BaseCallbackHandler):
         customer_user_id: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        '''Initialize the CallbackHandler'''
+        """Initialize the CallbackHandler"""
         if not athina_api_key:
             raise ValueError('No Athina API key provided')
         self.athina_api_key = athina_api_key
@@ -77,9 +77,9 @@ class CallbackHandler(BaseCallbackHandler):
     def on_chat_model_start(
         self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any,
     ) -> Any:
-        '''
+        """
         Log the chat model start
-        '''
+        """
         try:
             for message in messages:
                 message_dicts = self._create_message_dicts(message)
@@ -164,11 +164,11 @@ class CallbackHandler(BaseCallbackHandler):
         input_str: str,
         **kwargs: Any,
     ) -> None:
-        '''Do nothing when tool starts.'''
+        """Do nothing when tool starts."""
         pass
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
-        '''Do nothing when agent takes a specific action.'''
+        """Do nothing when agent takes a specific action."""
         pass
 
     def on_tool_end(
@@ -178,27 +178,27 @@ class CallbackHandler(BaseCallbackHandler):
         llm_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        '''Do nothing when tool ends.'''
+        """Do nothing when tool ends."""
         pass
 
     def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
-        '''Do nothing when tool outputs an error.'''
+        """Do nothing when tool outputs an error."""
         pass
 
     def on_text(self, text: str, **kwargs: Any) -> None:
-        '''Do nothing'''
+        """Do nothing"""
         pass
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
-        '''Do nothing'''
+        """Do nothing"""
         pass
 
     def _get_llm_usage(self, llm_output: Dict) -> Dict:
-        '''
+        """
         Fetch prompt tokens, completion tokens and total tokens from llm output
-        '''
+        """
         if 'token_usage' in llm_output:
             return {
                 'prompt_tokens': llm_output['token_usage']['prompt_tokens'] if 'prompt_tokens' in llm_output['token_usage'] else None,
@@ -213,9 +213,9 @@ class CallbackHandler(BaseCallbackHandler):
             }
 
     def _log_llm_response(self, run_info: Dict):
-        '''
+        """
         Logs the LLM response to athina
-        '''
+        """
         try:
             InferenceLogger.log_langchain_llm_response(athina_api_key=self.athina_api_key, prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
                                                        prompt_response=run_info['prompt_response'], model=run_info['language_model_id'],

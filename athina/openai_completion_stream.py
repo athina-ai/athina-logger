@@ -60,9 +60,9 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
             raise e
 
     def collect_stream_inference(self, response):
-        '''
+        """
         collects the inference from the log stream
-        '''
+        """
         try:
             for stream_chunk in response:
                 self.prompt_response += self._get_text_from_stream_chunk(
@@ -71,9 +71,9 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
             raise e
 
     def collect_stream_inference_by_chunk(self, stream_chunk):
-        '''
+        """
         collects the inference from the log stream of openai chat completion chunk by chunk
-        '''
+        """
         try:
             self.prompt_response += self._get_text_from_stream_chunk(
                 stream_chunk)

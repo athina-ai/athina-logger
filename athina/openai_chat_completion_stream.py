@@ -19,7 +19,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
                  customer_user_id: Optional[str] = None,
                  session_id: Optional[str] = None,
                  user_query: Optional[str] = None,):
-        '''
+        """
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
         :param messages: List[Dict[str, Any]] - The messages used for the inference.
@@ -31,7 +31,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         :param customer_user_id: Optional[str] - The customer's user identifier. Defaults to None.
         :param session_id: Optional[str] - The session identifier. Defaults to None.
         :param user_query: Optional[str] - The user's query or input. Defaults to None.
-        '''
+        """
         super().__init__(
             prompt_slug=prompt_slug,
             response_time=response_time,
@@ -47,9 +47,9 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         self.log_endpoint = LOG_OPENAI_CHAT_COMPLETION_URL
 
     def _get_text_from_stream_chunk(self, stream_chunk):
-        '''
+        """
         gets the text from the stream chunk
-        '''
+        """
         try:
             text = ''
             choices = stream_chunk.get('choices', [])
@@ -64,9 +64,9 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
             raise e
 
     def collect_stream_inference(self, response):
-        '''
+        """
         collects the inference from the log stream
-        '''
+        """
         try:
             print('here')
             for stream_chunk in response:
@@ -76,9 +76,9 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
             raise e
 
     def collect_stream_inference_by_chunk(self, stream_chunk):
-        '''
+        """
         collects the inference from the log stream of openai chat completion chunk by chunk
-        '''
+        """
         try:
             self.prompt_response += self._get_text_from_stream_chunk(
                 stream_chunk)
@@ -86,9 +86,9 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
             raise e
 
     def log_stream_inference(self):
-        '''
+        """
         logs the stream inference to the athina api server
-        '''
+        """
         try:
             payload = {
                 'prompt_slug': self.prompt_slug,

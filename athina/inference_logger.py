@@ -24,25 +24,25 @@ class InferenceLogger(ApiKey):
         """
         try:
             payload = {
-                "prompt_slug": prompt_slug,
-                "prompt_messages": messages,
-                "language_model_id": model,
-                "completion": completion,
-                "response_time": response_time,
-                "context": context,
-                "environment": environment,
-                "customer_id": str(customer_id) if customer_id is not None else None,
-                "customer_user_id": str(customer_user_id) if customer_user_id is not None else None,
-                "session_id": str(session_id) if session_id is not None else None,
-                "user_query": user_query,
+                'prompt_slug': prompt_slug,
+                'prompt_messages': messages,
+                'language_model_id': model,
+                'completion': completion,
+                'response_time': response_time,
+                'context': context,
+                'environment': environment,
+                'customer_id': str(customer_id) if customer_id is not None else None,
+                'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
+                'session_id': str(session_id) if session_id is not None else None,
+                'user_query': user_query,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
             requests.post(
-                f"{API_BASE_URL}/api/v1/log/prompt/openai-chat",
+                f'{API_BASE_URL}/api/v1/log/prompt/openai-chat',
                 json=payload,
                 headers={
-                    "athina-api-key": InferenceLogger.get_api_key(),
+                    'athina-api-key': InferenceLogger.get_api_key(),
                 },
             )
         except Exception as e:
@@ -67,25 +67,25 @@ class InferenceLogger(ApiKey):
         """
         try:
             payload = {
-                "prompt_slug": prompt_slug,
-                "prompt_text": prompt,
-                "language_model_id": model,
-                "completion": completion,
-                "response_time": response_time,
-                "context": context,
-                "environment": environment,
-                "customer_id": str(customer_id) if customer_id is not None else None,
-                "customer_user_id": str(customer_user_id) if customer_user_id is not None else None,
-                "session_id": str(session_id) if session_id is not None else None,
-                "user_query": user_query,
+                'prompt_slug': prompt_slug,
+                'prompt_text': prompt,
+                'language_model_id': model,
+                'completion': completion,
+                'response_time': response_time,
+                'context': context,
+                'environment': environment,
+                'customer_id': str(customer_id) if customer_id is not None else None,
+                'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
+                'session_id': str(session_id) if session_id is not None else None,
+                'user_query': user_query,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
             requests.post(
-                f"{API_BASE_URL}/api/v1/log/prompt/openai-completion",
+                f'{API_BASE_URL}/api/v1/log/prompt/openai-completion',
                 json=payload,
                 headers={
-                    "athina-api-key": InferenceLogger.get_api_key(),
+                    'athina-api-key': InferenceLogger.get_api_key(),
                 },
             )
         except Exception as e:
@@ -112,28 +112,28 @@ class InferenceLogger(ApiKey):
         """
         try:
             payload = {
-                "prompt_slug": prompt_slug,
-                "prompt_text": prompt,
-                "language_model_id": "generic",
-                "prompt_response": llm_response,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens,
-                "response_time": response_time,
-                "context": context,
-                "environment": environment,
-                "customer_id": str(customer_id) if customer_id is not None else None,
-                "customer_user_id": str(customer_user_id) if customer_user_id is not None else None,
-                "session_id": str(session_id) if session_id is not None else None,
-                "user_query": user_query,
+                'prompt_slug': prompt_slug,
+                'prompt_text': prompt,
+                'language_model_id': 'generic',
+                'prompt_response': llm_response,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
+                'response_time': response_time,
+                'context': context,
+                'environment': environment,
+                'customer_id': str(customer_id) if customer_id is not None else None,
+                'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
+                'session_id': str(session_id) if session_id is not None else None,
+                'user_query': user_query,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
             requests.post(
-                f"{API_BASE_URL}/api/v1/log/prompt/generic",
+                f'{API_BASE_URL}/api/v1/log/prompt/generic',
                 json=payload,
                 headers={
-                    "athina-api-key": InferenceLogger.get_api_key(),
+                    'athina-api-key': InferenceLogger.get_api_key(),
                 },
             )
         except Exception as e:
@@ -161,28 +161,28 @@ class InferenceLogger(ApiKey):
         """
         try:
             payload = {
-                "prompt_slug": prompt_slug,
-                "prompt_sent": prompt_sent,
-                "language_model_id": model,
-                "prompt_response": prompt_response,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens,
-                "response_time": response_time,
-                "context": context,
-                "environment": environment,
-                "customer_id": str(customer_id) if customer_id is not None else None,
-                "customer_user_id": str(customer_user_id) if customer_user_id is not None else None,
-                "session_id": str(session_id) if session_id is not None else None,
-                "user_query": user_query,
+                'prompt_slug': prompt_slug,
+                'prompt_sent': prompt_sent,
+                'language_model_id': model,
+                'prompt_response': prompt_response,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
+                'response_time': response_time,
+                'context': context,
+                'environment': environment,
+                'customer_id': str(customer_id) if customer_id is not None else None,
+                'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
+                'session_id': str(session_id) if session_id is not None else None,
+                'user_query': user_query,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
             requests.post(
-                f"{API_BASE_URL}/api/v1/log/prompt/langchain",
+                f'{API_BASE_URL}/api/v1/log/prompt/langchain',
                 json=payload,
                 headers={
-                    "athina-api-key": InferenceLogger.get_api_key(),
+                    'athina-api-key': InferenceLogger.get_api_key(),
                 },
             )
         except Exception as e:
