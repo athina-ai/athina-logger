@@ -20,9 +20,10 @@ from langchain.schema.messages import (
 from langchain.schema.document import Document
 
 from .inference_logger import InferenceLogger
+from .api_key import ApiKey
 
 
-class CallbackHandler(BaseCallbackHandler):
+class CallbackHandler(BaseCallbackHandler, ApiKey):
     """
     Callback handler for the LangChain API.
     """
@@ -30,7 +31,6 @@ class CallbackHandler(BaseCallbackHandler):
     def __init__(
         self,
         prompt_slug: str,
-        athina_api_key: str,
         environment: Optional[str] = 'production',
         session_id: Optional[str] = None,
         customer_id: Optional[str] = None,
@@ -38,9 +38,6 @@ class CallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Initialize the CallbackHandler"""
-        if not athina_api_key:
-            raise ValueError('No Athina API key provided')
-        self.athina_api_key = athina_api_key
         if kwargs:
             self.global_context = kwargs
         else:
@@ -99,6 +96,17 @@ class CallbackHandler(BaseCallbackHandler):
             }
         except Exception as e:
             pass
+
+    def on_llm_new_token(
+        self,
+        token: str,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Run on new LLM token. Only available when streaming is enabled."""
+        pass
 
     def on_llm_start(
         self,
@@ -199,7 +207,7 @@ class CallbackHandler(BaseCallbackHandler):
         """
         Fetch prompt tokens, completion tokens and total tokens from llm output
         """
-        if 'token_usage' in llm_output:
+        if llm_output is not None and 'token_usage' in llm_output:
             return {
                 'prompt_tokens': llm_output['token_usage']['prompt_tokens'] if 'prompt_tokens' in llm_output['token_usage'] else None,
                 'completion_tokens': llm_output['token_usage']['completion_tokens'] if 'completion_tokens' in llm_output['token_usage'] else None,
@@ -217,7 +225,7 @@ class CallbackHandler(BaseCallbackHandler):
         Logs the LLM response to athina
         """
         try:
-            InferenceLogger.log_langchain_llm_response(athina_api_key=self.athina_api_key, prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
+            InferenceLogger.log_langchain_llm_response(prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
                                                        prompt_response=run_info['prompt_response'], model=run_info['language_model_id'],
                                                        prompt_tokens=run_info['prompt_tokens'], completion_tokens=run_info[
                                                            'completion_tokens'],
