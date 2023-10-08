@@ -1,8 +1,8 @@
-import requests
-from .api_key import ApiKey
-from .constants import API_BASE_URL
+
 from typing import Optional
-from .request_helper import RequestHelper
+from ..api_key import ApiKey
+from ..constants import API_BASE_URL
+from ..request_helper import RequestHelper
 
 
 class UserFeedback(ApiKey):

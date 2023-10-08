@@ -1,11 +1,9 @@
 from typing import List, Optional, Dict, Any
 
-import requests
-
 from .log_stream_inference import LogStreamInference
-from .api_key import ApiKey
-from .constants import LOG_OPENAI_CHAT_COMPLETION_URL
-from .request_helper import RequestHelper
+from ..api_key import ApiKey
+from ..constants import LOG_OPENAI_CHAT_COMPLETION_URL
+from ..request_helper import RequestHelper
 
 
 class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):

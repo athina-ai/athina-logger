@@ -1,5 +1,4 @@
 import requests
-from typing import Any, List, Optional, TypedDict
 from retrying import retry
 
 

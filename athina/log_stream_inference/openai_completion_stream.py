@@ -1,9 +1,8 @@
 from typing import List, Optional, Dict, Any
-
-import requests
-from .constants import LOG_OPENAI_COMPLETION_URL
+from ..constants import LOG_OPENAI_COMPLETION_URL
 from .log_stream_inference import LogStreamInference
-from .api_key import ApiKey
+from ..api_key import ApiKey
+from ..request_helper import RequestHelper
 
 
 class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
@@ -104,12 +103,8 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            requests.post(
-                self.log_endpoint,
-                json=payload,
-                headers={
-                    'athina-api-key': LogOpenAiCompletionStreamInference.get_api_key(),
-                },
-            )
+            RequestHelper.make_post_request(endpoint=self.log_endpoint, payload=payload, headers={
+                'athina-api-key': LogOpenAiCompletionStreamInference.get_api_key(),
+            })
         except Exception as e:
             raise e
