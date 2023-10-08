@@ -188,9 +188,10 @@ class InferenceLogger(ApiKey):
         customer_user_id: Optional[Union[int, str]] = None,
         session_id: Optional[Union[int, str]] = None,
         user_query: Optional[str] = None,
+        external_reference_id: Optional[str] = None,
     ) -> None:
         """
-        Track the request and response for a language model (not specific to any provider).
+        track the request and response for a language model made by langchain.
         """
         try:
             payload = {
@@ -207,16 +208,13 @@ class InferenceLogger(ApiKey):
                 'customer_id': str(customer_id) if customer_id is not None else None,
                 'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
                 'session_id': str(session_id) if session_id is not None else None,
-                'user_query': user_query,
+                'user_query': str(user_query) if user_query is not None else None,
+                'external_reference_id': str(external_reference_id) if external_reference_id is not None else None,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            requests.post(
-                f'{API_BASE_URL}/api/v1/log/prompt/langchain',
-                json=payload,
-                headers={
-                    'athina-api-key': InferenceLogger.get_api_key(),
-                },
-            )
+            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/prompt/langchain', payload=payload, headers={
+                'athina-api-key': InferenceLogger.get_api_key(),
+            })
         except Exception as e:
             raise e

@@ -15,7 +15,8 @@ class LogStreamInference(ABC):
                  customer_id: Optional[str] = None,
                  customer_user_id: Optional[str] = None,
                  session_id: Optional[str] = None,
-                 user_query: Optional[str] = None):
+                 user_query: Optional[str] = None,
+                 external_reference_id: Optional[str] = None,):
         """
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
@@ -26,6 +27,7 @@ class LogStreamInference(ABC):
         :param customer_user_id: Optional[str] - The customer's user identifier. Defaults to None.
         :param session_id: Optional[str] - The session identifier. Defaults to None.
         :param user_query: Optional[str] - The user's query or input. Defaults to None.
+        :param external_reference_id: Optional[str] - The external reference id. Defaults to None.
         """
         self._prompt_slug = prompt_slug
         self._response_time = response_time
@@ -35,6 +37,7 @@ class LogStreamInference(ABC):
         self._customer_user_id = customer_user_id
         self._session_id = session_id
         self._user_query = user_query
+        self._external_reference_id = external_reference_id
 
     @property
     def prompt_slug(self):
@@ -99,6 +102,14 @@ class LogStreamInference(ABC):
     @user_query.setter
     def user_query(self, value):
         self._user_query = value
+
+    @property
+    def external_reference_id(self):
+        return self._external_reference_id
+
+    @external_reference_id.setter
+    def external_reference_id(self, value):
+        self._external_reference_id = value
 
     @abstractmethod
     def collect_stream_inference(self, response):

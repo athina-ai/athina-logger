@@ -5,6 +5,7 @@ import requests
 from .log_stream_inference import LogStreamInference
 from .api_key import ApiKey
 from .constants import LOG_OPENAI_CHAT_COMPLETION_URL
+from .request_helper import RequestHelper
 
 
 class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
@@ -18,7 +19,8 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
                  customer_id: Optional[str] = None,
                  customer_user_id: Optional[str] = None,
                  session_id: Optional[str] = None,
-                 user_query: Optional[str] = None,):
+                 user_query: Optional[str] = None,
+                 external_reference_id: Optional[str] = None,):
         """
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
@@ -31,6 +33,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         :param customer_user_id: Optional[str] - The customer's user identifier. Defaults to None.
         :param session_id: Optional[str] - The session identifier. Defaults to None.
         :param user_query: Optional[str] - The user's query or input. Defaults to None.
+        :param external_reference_id: Optional[str] - The external reference id. Defaults to None.
         """
         super().__init__(
             prompt_slug=prompt_slug,
@@ -40,7 +43,8 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
             customer_id=customer_id,
             customer_user_id=customer_user_id,
             session_id=session_id,
-            user_query=user_query)
+            user_query=user_query,
+            external_reference_id=external_reference_id,)
         self.messages = messages
         self.model = model
         self.prompt_response = ''
@@ -101,16 +105,13 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
                 'customer_id': str(self.customer_id) if self.customer_id is not None else None,
                 'customer_user_id': str(self.customer_user_id) if self.customer_user_id is not None else None,
                 'session_id': str(self.session_id) if self.session_id is not None else None,
-                'user_query': self.user_query,
+                'user_query': str(self.user_query) if self.user_query is not None else None,
+                'external_reference_id': str(self.external_reference_id) if self.external_reference_id is not None else None,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            requests.post(
-                self.log_endpoint,
-                json=payload,
-                headers={
-                    'athina-api-key': self.get_api_key(),
-                },
-            )
+            RequestHelper.make_post_request(endpoint=self.log_endpoint, payload=payload, headers={
+                'athina-api-key': LogOpenAiChatCompletionStreamInference.get_api_key(),
+            })
         except Exception as e:
             raise e

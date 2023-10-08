@@ -2,6 +2,7 @@ import requests
 from .api_key import ApiKey
 from .constants import API_BASE_URL
 from typing import Optional
+from .request_helper import RequestHelper
 
 
 class UserFeedback(ApiKey):
@@ -25,12 +26,8 @@ class UserFeedback(ApiKey):
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            requests.post(
-                f'{API_BASE_URL}/api/v1/log/user-feedback',
-                json=payload,
-                headers={
-                    'athina-api-key': UserFeedback.get_api_key(),
-                },
-            )
+            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/user-feedback', payload=payload, headers={
+                'athina-api-key': UserFeedback.get_api_key(),
+            })
         except Exception as e:
             raise e

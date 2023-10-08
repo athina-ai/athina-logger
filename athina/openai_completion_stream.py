@@ -17,7 +17,8 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
                  customer_id: Optional[str] = None,
                  customer_user_id: Optional[str] = None,
                  session_id: Optional[str] = None,
-                 user_query: Optional[str] = None,):
+                 user_query: Optional[str] = None,
+                 external_reference_id: Optional[str] = None,):
         """
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
@@ -30,6 +31,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
         :param customer_user_id: Optional[str] - The customer's user identifier. Defaults to None.
         :param session_id: Optional[str] - The session identifier. Defaults to None.
         :param user_query: Optional[str] - The user's query or input. Defaults to None.
+        :param external_reference_id: Optional[str] - The external reference id. Defaults to None.
         """
         super().__init__(
             prompt_slug=prompt_slug,
@@ -39,7 +41,8 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
             customer_id=customer_id,
             customer_user_id=customer_user_id,
             session_id=session_id,
-            user_query=user_query)
+            user_query=user_query,
+            external_reference_id=external_reference_id,)
         self.prompt = prompt
         self.model = model
         self.prompt_response = ''
@@ -51,9 +54,9 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
         """
         try:
             text = ''
-            choices = stream_chunk.get("choices", [])
-            if choices and len(choices) > 0 and "text" in choices[0]:
-                text = choices[0].get("text", {})
+            choices = stream_chunk.get('choices', [])
+            if choices and len(choices) > 0 and 'text' in choices[0]:
+                text = choices[0].get('text', {})
 
             return text
         except Exception as e:
@@ -86,17 +89,18 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
         """
         try:
             payload = {
-                "prompt_slug": self.prompt_slug,
-                "prompt_text": self.prompt,
-                "language_model_id": self.model,
-                "prompt_response": self.prompt_response,
-                "response_time": self.response_time,
-                "context": self.context,
-                "environment": self.environment,
-                "customer_id": str(self.customer_id) if self.customer_id is not None else None,
-                "customer_user_id": str(self.customer_user_id) if self.customer_user_id is not None else None,
-                "session_id": str(self.session_id) if self.session_id is not None else None,
-                "user_query": self.user_query,
+                'prompt_slug': self.prompt_slug,
+                'prompt_text': self.prompt,
+                'language_model_id': self.model,
+                'prompt_response': self.prompt_response,
+                'response_time': self.response_time,
+                'context': self.context,
+                'environment': self.environment,
+                'customer_id': str(self.customer_id) if self.customer_id is not None else None,
+                'customer_user_id': str(self.customer_user_id) if self.customer_user_id is not None else None,
+                'session_id': str(self.session_id) if self.session_id is not None else None,
+                'user_query': str(self.user_query) if self.user_query is not None else None,
+                'external_reference_id': str(self.external_reference_id) if self.external_reference_id is not None else None,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
@@ -104,7 +108,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
                 self.log_endpoint,
                 json=payload,
                 headers={
-                    "athina-api-key": self.get_api_key(),
+                    'athina-api-key': LogOpenAiCompletionStreamInference.get_api_key(),
                 },
             )
         except Exception as e:
