@@ -126,27 +126,32 @@ class InferenceLogger(ApiKey):
     def log_generic_response(
         prompt_slug: str,
         prompt: str,
-        llm_response: str,
+        model: str,
+        prompt_response: str,
         prompt_tokens: Optional[int] = None,
         completion_tokens: Optional[int] = None,
         total_tokens: Optional[int] = None,
         response_time: Optional[int] = None,
         context: Optional[Dict] = None,
-        environment: Optional[str] = None,
+        environment: Optional[str] = 'production',
         customer_id: Optional[str] = None,
         customer_user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         user_query: Optional[str] = None,
+        external_reference_id: Optional[str] = None,
     ) -> None:
         """
-        Track a generic language model response (not specific to any provider)
+        track a generic language model response
         """
+        if model not in LLM_MODELS_SUPPORTED:
+            raise ValueError(
+                f'Language model {model} is not supported. Supported models are: {LLM_MODELS_SUPPORTED}')
         try:
             payload = {
                 'prompt_slug': prompt_slug,
                 'prompt_text': prompt,
-                'language_model_id': 'generic',
-                'prompt_response': llm_response,
+                'language_model_id': model,
+                'prompt_response': prompt_response,
                 'prompt_tokens': prompt_tokens,
                 'completion_tokens': completion_tokens,
                 'total_tokens': total_tokens,
@@ -156,17 +161,14 @@ class InferenceLogger(ApiKey):
                 'customer_id': str(customer_id) if customer_id is not None else None,
                 'customer_user_id': str(customer_user_id) if customer_user_id is not None else None,
                 'session_id': str(session_id) if session_id is not None else None,
-                'user_query': user_query,
+                'user_query': str(user_query) if user_query is not None else None,
+                'external_reference_id': str(external_reference_id) if external_reference_id is not None else None,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            requests.post(
-                f'{API_BASE_URL}/api/v1/log/prompt/generic',
-                json=payload,
-                headers={
-                    'athina-api-key': InferenceLogger.get_api_key(),
-                },
-            )
+            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/prompt/generic', payload=payload, headers={
+                'athina-api-key': InferenceLogger.get_api_key(),
+            })
         except Exception as e:
             raise e
 
