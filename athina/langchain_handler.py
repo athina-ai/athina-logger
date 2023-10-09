@@ -21,6 +21,7 @@ from langchain.schema.document import Document
 
 from .inference_logger import InferenceLogger
 from .api_key import ApiKey
+from .util.token_count_helper import get_prompt_tokens_openai_chat_completion, get_completion_tokens_openai_chat_completion, get_token_usage_openai_completion
 
 
 class CallbackHandler(BaseCallbackHandler, ApiKey):
@@ -203,7 +204,7 @@ class CallbackHandler(BaseCallbackHandler, ApiKey):
         """Do nothing"""
         pass
 
-    def _get_llm_usage(self, llm_output: Dict) -> Dict:
+    def _get_llm_usage(self, llm_output: Dict, prompt_sent, prompt_response, model, is_chat_model) -> Dict:
         """
         Fetch prompt tokens, completion tokens and total tokens from llm output
         """
@@ -214,11 +215,62 @@ class CallbackHandler(BaseCallbackHandler, ApiKey):
                 'total_tokens': llm_output['token_usage']['total_tokens'] if 'total_tokens' in llm_output['token_usage'] else None,
             }
         else:
-            return {
-                'prompt_tokens': None,
-                'completion_tokens': None,
-                'total_tokens': None
-            }
+            if is_chat_model:
+                prompt_tokens = self._get_prompt_tokens_chat_model(
+                    messages=prompt_sent, model=model)
+                completion_tokens = self._get_completion_tokens_chat_model(
+                    response=prompt_response, model=model)
+                if prompt_tokens is not None and completion_tokens is not None:
+                    total_tokens = prompt_tokens + completion_tokens
+                else:
+                    total_tokens = None
+            else:
+                prompt_tokens = self._get_token_usage_completion_model(
+                    text=prompt_sent, model=model)
+                completion_tokens = self._get_token_usage_completion_model(
+                    text=prompt_response, model=model)
+                if prompt_tokens is not None and completion_tokens is not None:
+                    total_tokens = prompt_tokens + completion_tokens
+                else:
+                    total_tokens = None
+        return {
+            'prompt_tokens': prompt_tokens,
+            'completion_tokens': completion_tokens,
+            'total_tokens': total_tokens
+        }
+
+    def _get_prompt_tokens_chat_model(self, messages: List[Dict[str, Any]], model: str):
+        """
+        gets the prompt tokens given the messages array
+        """
+        try:
+            tokens = get_prompt_tokens_openai_chat_completion(
+                messages=messages, model=model)
+            return tokens
+        except Exception as e:
+            return None
+
+    def _get_completion_tokens_chat_model(self, response: str, model: str):
+        """
+        gets the completion tokens given the prompt response from the openai chat model completion
+        """
+        try:
+            tokens = get_completion_tokens_openai_chat_completion(
+                response=response, model=model)
+            return tokens
+        except Exception as e:
+            return None
+
+    def _get_token_usage_completion_model(self, text: str, model: str):
+        """
+        gets the token usage given the prompt or prompt response for the openai completion model
+        """
+        try:
+            tokens = get_token_usage_openai_completion(
+                text=text, model=model)
+            return tokens
+        except Exception as e:
+            return None
 
     def _log_llm_response(self, run_info: Dict):
         """
