@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-
+import tiktoken
 from .log_stream_inference import LogStreamInference
 from ..api_key import ApiKey
 from ..constants import LOG_OPENAI_CHAT_COMPLETION_URL
@@ -113,3 +113,12 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
             })
         except Exception as e:
             raise e
+
+    def _get_prompt_tokens(self, messages: List[Dict[str, Any]], model: str):
+        """
+        gets the prompt tokens given the messages array
+        """
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+        except KeyError:
+            encoding = tiktoken.get_encoding("cl100k_base")
