@@ -4,6 +4,7 @@ from .log_stream_inference import LogStreamInference
 from ..api_key import ApiKey
 from ..constants import LOG_OPENAI_CHAT_COMPLETION_URL
 from ..request_helper import RequestHelper
+from ..util.token_count_helper import get_prompt_tokens_openai_chat_completion, get_completion_tokens_openai_chat_completion
 
 
 class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
@@ -92,6 +93,14 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         logs the stream inference to the athina api server
         """
         try:
+            prompt_tokens = self._get_prompt_tokens(
+                messages=self.messages, model=self.model)
+            completion_tokens = self._get_completion_tokens(
+                response=self.prompt_response, model=self.model)
+            if prompt_tokens is not None and completion_tokens is not None:
+                total_tokens = prompt_tokens + completion_tokens
+            else:
+                total_tokens = None
             payload = {
                 'prompt_slug': self.prompt_slug,
                 'prompt_messages': self.messages,
@@ -105,6 +114,9 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
                 'session_id': str(self.session_id) if self.session_id is not None else None,
                 'user_query': str(self.user_query) if self.user_query is not None else None,
                 'external_reference_id': str(self.external_reference_id) if self.external_reference_id is not None else None,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
@@ -119,6 +131,19 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         gets the prompt tokens given the messages array
         """
         try:
-            encoding = tiktoken.encoding_for_model(model)
-        except KeyError:
-            encoding = tiktoken.get_encoding("cl100k_base")
+            tokens = get_prompt_tokens_openai_chat_completion(
+                messages=messages, model=model)
+            return tokens
+        except Exception as e:
+            return None
+
+    def _get_completion_tokens(self, response: str, model: str):
+        """
+        gets the completion tokens given the prompt response from the openai chat model completion
+        """
+        try:
+            tokens = get_completion_tokens_openai_chat_completion(
+                response=response, model=model)
+            return tokens
+        except Exception as e:
+            return None

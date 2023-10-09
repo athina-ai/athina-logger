@@ -3,6 +3,7 @@ from ..constants import LOG_OPENAI_COMPLETION_URL
 from .log_stream_inference import LogStreamInference
 from ..api_key import ApiKey
 from ..request_helper import RequestHelper
+from ..util.token_count_helper import get_token_usage_openai_completion
 
 
 class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
@@ -87,6 +88,14 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
         logs the stream inference to the athina api server
         """
         try:
+            prompt_tokens = self._get_prompt_tokens(
+                messages=self.prompt, model=self.model)
+            completion_tokens = self._get_completion_tokens(
+                response=self.prompt_response, model=self.model)
+            if prompt_tokens is not None and completion_tokens is not None:
+                total_tokens = prompt_tokens + completion_tokens
+            else:
+                total_tokens = None
             payload = {
                 'prompt_slug': self.prompt_slug,
                 'prompt_text': self.prompt,
@@ -100,6 +109,9 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
                 'session_id': str(self.session_id) if self.session_id is not None else None,
                 'user_query': str(self.user_query) if self.user_query is not None else None,
                 'external_reference_id': str(self.external_reference_id) if self.external_reference_id is not None else None,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
@@ -108,3 +120,25 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
             })
         except Exception as e:
             raise e
+
+    def _get_prompt_tokens(self, prompt: str, model: str):
+        """
+        gets the prompt tokens given the prompt for the openai chat model completion
+        """
+        try:
+            tokens = get_token_usage_openai_completion(
+                text=prompt, model=model)
+            return tokens
+        except Exception as e:
+            return None
+
+    def _get_completion_tokens(self, response: str, model: str):
+        """
+        gets the completion tokens given the prompt response from the openai chat model completion
+        """
+        try:
+            tokens = get_token_usage_openai_completion(
+                text=response, model=model)
+            return tokens
+        except Exception as e:
+            return None
