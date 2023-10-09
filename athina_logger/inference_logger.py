@@ -1,12 +1,12 @@
 import requests
 from typing import List, Optional, Dict, Union, Any
 from .constants import API_BASE_URL
-from .api_key import ApiKey
+from .api_key import AthinaApiKey
 from .request_helper import RequestHelper
 from .constants import LLM_MODELS_SUPPORTED
 
 
-class InferenceLogger(ApiKey):
+class InferenceLogger(AthinaApiKey):
     @staticmethod
     def log_open_ai_chat_response(
         prompt_slug: str,

@@ -1,11 +1,11 @@
 
 from typing import Optional
-from ..api_key import ApiKey
+from ..api_key import AthinaApiKey
 from ..constants import API_BASE_URL
 from ..request_helper import RequestHelper
 
 
-class UserFeedback(ApiKey):
+class UserFeedback(AthinaApiKey):
     """
     class for logging user feedback.
     """

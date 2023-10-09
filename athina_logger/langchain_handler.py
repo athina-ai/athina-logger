@@ -20,11 +20,11 @@ from langchain.schema.messages import (
 from langchain.schema.document import Document
 
 from .inference_logger import InferenceLogger
-from .api_key import ApiKey
+from .api_key import AthinaApiKey
 from .util.token_count_helper import get_prompt_tokens_openai_chat_completion, get_completion_tokens_openai_chat_completion, get_token_usage_openai_completion
 
 
-class CallbackHandler(BaseCallbackHandler, ApiKey):
+class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
     """
     Callback handler for the LangChain API.
     """
@@ -155,7 +155,8 @@ class CallbackHandler(BaseCallbackHandler, ApiKey):
                 generation = response.generations[i][0]
                 prompt_response = generation.text
                 llm_output = response.llm_output
-                token_usage = self._get_llm_usage(llm_output=llm_output)
+                token_usage = self._get_llm_usage(llm_output=llm_output, prompt_sent=run_info['prompt_sent'],
+                                                  prompt_response=prompt_response, model=run_info['language_model_id'], is_chat_model=run_info['is_chat_model'])
 
                 run_info['prompt_response'] = prompt_response
                 run_info['prompt_tokens'] = token_usage['prompt_tokens']

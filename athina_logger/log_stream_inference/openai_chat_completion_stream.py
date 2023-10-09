@@ -1,13 +1,13 @@
 from typing import List, Optional, Dict, Any
 import tiktoken
 from .log_stream_inference import LogStreamInference
-from ..api_key import ApiKey
+from ..api_key import AthinaApiKey
 from ..constants import LOG_OPENAI_CHAT_COMPLETION_URL
 from ..request_helper import RequestHelper
 from ..util.token_count_helper import get_prompt_tokens_openai_chat_completion, get_completion_tokens_openai_chat_completion
 
 
-class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
+class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
     def __init__(self,
                  prompt_slug: str,
                  messages: List[Dict[str, Any]],
@@ -61,7 +61,6 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
                 if 'content' in delta:
                     text = delta.get('content', '')
 
-            print(text)
             return text
         except Exception as e:
             raise e
@@ -71,7 +70,6 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         collects the inference from the log stream
         """
         try:
-            print('here')
             for stream_chunk in response:
                 self.prompt_response += self._get_text_from_stream_chunk(
                     stream_chunk)
@@ -95,8 +93,10 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, ApiKey):
         try:
             prompt_tokens = self._get_prompt_tokens(
                 messages=self.messages, model=self.model)
+
             completion_tokens = self._get_completion_tokens(
                 response=self.prompt_response, model=self.model)
+
             if prompt_tokens is not None and completion_tokens is not None:
                 total_tokens = prompt_tokens + completion_tokens
             else:

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "athina"
+name = "athina-logger"
 version = "0.0.1"
 description = ""
 authors = ["Akshat Gupta <akshat@athina.ai>"]

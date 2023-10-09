@@ -1,7 +1,7 @@
 from abc import ABC
 
 
-class ApiKey(ABC):
+class AthinaApiKey(ABC):
     _athina_api_key = None
 
     @classmethod

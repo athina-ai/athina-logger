@@ -1,12 +1,12 @@
 from typing import List, Optional, Dict, Any
 from ..constants import LOG_OPENAI_COMPLETION_URL
 from .log_stream_inference import LogStreamInference
-from ..api_key import ApiKey
+from ..api_key import AthinaApiKey
 from ..request_helper import RequestHelper
 from ..util.token_count_helper import get_token_usage_openai_completion
 
 
-class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
+class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
     def __init__(self,
                  prompt_slug: str,
                  prompt: str,
@@ -89,7 +89,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, ApiKey):
         """
         try:
             prompt_tokens = self._get_prompt_tokens(
-                messages=self.prompt, model=self.model)
+                prompt=self.prompt, model=self.model)
             completion_tokens = self._get_completion_tokens(
                 response=self.prompt_response, model=self.model)
             if prompt_tokens is not None and completion_tokens is not None:

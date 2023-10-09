@@ -11,9 +11,10 @@ def get_prompt_tokens_openai_chat_completion(messages: List[Dict[str, Any]], mod
     if messages is None:
         raise ValueError('messages is None')
     try:
-        encoding = tiktoken.encoding_for_model(model)
-    except KeyError:
         encoding = tiktoken.get_encoding('cl100k_base')
+    except KeyError:
+        return None
+
     if model in {
         'gpt-3.5-turbo-0613',
         'gpt-3.5-turbo-16k-0613',
@@ -56,16 +57,16 @@ def get_completion_tokens_openai_chat_completion(response: str, model: str):
             'gpt-4-0613',
             'gpt-4-32k-0613',
         }:
-            encoding = tiktoken.encoding_for_model(model)
+            encoding = tiktoken.get_encoding('cl100k_base')
         elif 'gpt-3.5-turbo' in model:
-            return get_prompt_tokens_openai_chat_completion(response, model='gpt-3.5-turbo-0613')
+            return get_completion_tokens_openai_chat_completion(response, model='gpt-3.5-turbo-0613')
         elif 'gpt-4' in model:
-            return get_prompt_tokens_openai_chat_completion(response, model='gpt-4-0613')
+            return get_completion_tokens_openai_chat_completion(response, model='gpt-4-0613')
         else:
             raise ValueError(
                 f'Language model {model} is not supported')
     except KeyError:
-        encoding = tiktoken.get_encoding('cl100k_base')
+        return None
 
     try:
         tokens = len(encoding.encode(response))
