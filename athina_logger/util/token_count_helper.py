@@ -1,5 +1,6 @@
 from typing import Dict, List, Any
 import tiktoken
+from ..constants import OPENAI_MODEL_ENCODINGS
 
 # source: https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
 
@@ -11,7 +12,7 @@ def get_prompt_tokens_openai_chat_completion(messages: List[Dict[str, Any]], mod
     if messages is None:
         raise ValueError('messages is None')
     try:
-        encoding = tiktoken.get_encoding('cl100k_base')
+        encoding = tiktoken.get_encoding(OPENAI_MODEL_ENCODINGS[model])
     except KeyError:
         return None
 
@@ -57,7 +58,7 @@ def get_completion_tokens_openai_chat_completion(response: str, model: str):
             'gpt-4-0613',
             'gpt-4-32k-0613',
         }:
-            encoding = tiktoken.get_encoding('cl100k_base')
+            encoding = tiktoken.get_encoding(OPENAI_MODEL_ENCODINGS[model])
         elif 'gpt-3.5-turbo' in model:
             return get_completion_tokens_openai_chat_completion(response, model='gpt-3.5-turbo-0613')
         elif 'gpt-4' in model:
@@ -82,9 +83,9 @@ def get_token_usage_openai_completion(text: str, model: str):
     if text is None:
         raise ValueError('text is None')
     try:
-        encoding = tiktoken.encoding_for_model(model)
+        encoding = tiktoken.get_encoding(OPENAI_MODEL_ENCODINGS[model])
     except KeyError:
-        encoding = tiktoken.get_encoding('p50k_base')
+        return None
 
     try:
         tokens = len(encoding.encode(text))
