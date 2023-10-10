@@ -26,7 +26,7 @@ class UserFeedback(AthinaApiKey):
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/user-feedback', payload=payload, headers={
+            RequestHelper.make_patch_request(endpoint=f'{API_BASE_URL}/api/v1/promptRun/user-feedback', payload=payload, headers={
                 'athina-api-key': UserFeedback.get_api_key(),
             })
         except Exception as e:
