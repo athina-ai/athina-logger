@@ -36,6 +36,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         session_id: Optional[str] = None,
         customer_id: Optional[str] = None,
         customer_user_id: Optional[str] = None,
+        external_reference_id: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the CallbackHandler"""
@@ -49,6 +50,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         self.session_id = session_id
         self.customer_id = customer_id
         self.customer_user_id = customer_user_id
+        self.external_reference_id = external_reference_id
         self.runs: Dict[UUID, Dict[str, Any]] = {}
 
     def on_retriever_end(
@@ -92,6 +94,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
                 'customer_user_id': self.customer_user_id,
+                'external_reference_id': self.external_reference_id,
                 'llm_start_time': datetime.now(timezone.utc),
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
@@ -129,6 +132,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
                 'customer_user_id': self.customer_user_id,
+                'external_reference_id': self.external_reference_id,
                 'llm_start_time': datetime.now(timezone.utc),
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
@@ -286,7 +290,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                                                        environment=self.environment, context=run_info[
                 'context'], user_query=run_info['user_query'],
                 customer_id=run_info['customer_id'], session_id=run_info['session_id'],
-                customer_user_id=run_info['customer_user_id'])
+                customer_user_id=run_info['customer_user_id'], external_reference_id=run_info['external_reference_id'])
 
         except Exception as e:
             pass
