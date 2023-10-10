@@ -24,7 +24,7 @@ LLM_MODELS_SUPPORTED = [
     'meta-llama/Llama-2-7b-chat',
     'meta-llama/Llama-2-7b-chat-hf',
     'meta-llama/Llama-2-7b-hf',
-    'claude-2'
+    'claude-2',
     'text-davinci-003'
 ]
 
