@@ -26,3 +26,11 @@ LLM_MODELS_SUPPORTED = [
     'meta-llama/Llama-2-7b-hf',
     'text-davinci-003'
 ]
+
+OPENAI_MODEL_ENCODINGS = {
+    'gpt-3.5-turbo-0613': 'cl100k_base',
+    'gpt-3.5-turbo-16k-0613': 'cl100k_base',
+    'gpt-4-0613': 'cl100k_base',
+    'gpt-4-32k-0613': 'cl100k_base',
+    'text-davinci-003': 'p50k_base',
+}
