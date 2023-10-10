@@ -12,11 +12,20 @@ class RequestHelper:
     @retry(wait_fixed=100, stop_max_attempt_number=2)
     def make_post_request(endpoint: str, payload: dict, headers: dict):
         try:
-            requests.post(
+            response = requests.post(
                 endpoint,
                 json=payload,
                 headers=headers,
             )
+            if response.status_code != 200:
+                response_json = response.json()
+                error_message = response_json.get('error', 'Unknown Error')
+                details_message = response_json.get(
+                    'details', {}).get('message', 'No Details')
+                raise CustomException(
+                    400, f'{error_message}: {details_message}')
+        except requests.exceptions.RequestException as e:
+            raise e
         except Exception as e:
             raise e
 
