@@ -73,6 +73,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             run_info['retrieved_documents'] = self.global_context
         except Exception as e:
             exception_message = (
+                f"Error:\n"
                 f"service name: athina-logger\n"
                 f"file name: langchain_handler\n"
                 f"method name: on_retriever_end\n"
@@ -106,6 +107,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             }
         except Exception as e:
             exception_message = (
+                f"Error:\n"
                 f"service name: athina-logger\n"
                 f"file name: langchain_handler\n"
                 f"method name: on_chat_model_start\n"
@@ -150,6 +152,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             }
         except Exception as e:
             exception_message = (
+                f"Error:\n"
                 f"service name: athina-logger\n"
                 f"file name: langchain_handler\n"
                 f"method name: on_llm_start\n"
@@ -189,6 +192,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 self._log_llm_response(run_info)
         except Exception as e:
             exception_message = (
+                f"Error:\n"
                 f"service name: athina-logger\n"
                 f"file name: langchain_handler\n"
                 f"method name: on_llm_end\n"
@@ -318,6 +322,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
 
         except Exception as e:
             exception_message = (
+                f"Error:\n"
                 f"service name: athina-logger\n"
                 f"file name: langchain_handler\n"
                 f"method name: _log_llm_response\n"
