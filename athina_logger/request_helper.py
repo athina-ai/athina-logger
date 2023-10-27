@@ -23,7 +23,7 @@ class RequestHelper:
                 details_message = response_json.get(
                     'details', {}).get('message', 'No Details')
                 raise CustomException(
-                    400, f'{error_message}: {details_message}')
+                    response.status_code, f'{error_message}: {details_message}')
         except requests.exceptions.RequestException as e:
             raise e
         except Exception as e:
@@ -44,7 +44,7 @@ class RequestHelper:
                 details_message = response_json.get(
                     'details', {}).get('message', 'No Details')
                 raise CustomException(
-                    400, f'{error_message}: {details_message}')
+                    response.status_code, f'{error_message}: {details_message}')
         except requests.exceptions.RequestException as e:
             raise e
         except Exception as e:

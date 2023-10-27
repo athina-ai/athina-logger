@@ -72,7 +72,14 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             self.global_context['documents'] = retrieved_documents_data
             run_info['retrieved_documents'] = self.global_context
         except Exception as e:
-            pass
+            exception_message = (
+                f"Error:\n"
+                f"service name: athina-logger\n"
+                f"file name: langchain_handler\n"
+                f"method name: on_retriever_end\n"
+                f"{str(e)}"
+            )
+            print(exception_message)
 
     def on_chat_model_start(
         self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any,
@@ -99,7 +106,14 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
         except Exception as e:
-            pass
+            exception_message = (
+                f"Error:\n"
+                f"service name: athina-logger\n"
+                f"file name: langchain_handler\n"
+                f"method name: on_chat_model_start\n"
+                f"{str(e)}"
+            )
+            print(exception_message)
 
     def on_llm_new_token(
         self,
@@ -137,7 +151,14 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
         except Exception as e:
-            pass
+            exception_message = (
+                f"Error:\n"
+                f"service name: athina-logger\n"
+                f"file name: langchain_handler\n"
+                f"method name: on_llm_start\n"
+                f"{str(e)}"
+            )
+            print(exception_message)
 
     def on_llm_end(
         self,
@@ -170,7 +191,14 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 # LOG TO API SERVER
                 self._log_llm_response(run_info)
         except Exception as e:
-            pass
+            exception_message = (
+                f"Error:\n"
+                f"service name: athina-logger\n"
+                f"file name: langchain_handler\n"
+                f"method name: on_llm_end\n"
+                f"{str(e)}"
+            )
+            print(exception_message)
 
     def on_tool_start(
         self,
@@ -293,7 +321,14 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 customer_user_id=run_info['customer_user_id'], external_reference_id=run_info['external_reference_id'])
 
         except Exception as e:
-            pass
+            exception_message = (
+                f"Error:\n"
+                f"service name: athina-logger\n"
+                f"file name: langchain_handler\n"
+                f"method name: _log_llm_response\n"
+                f"{str(e)}"
+            )
+            print(exception_message)
 
     def _convert_message_to_dict(self, message: BaseMessage) -> Dict[str, Any]:
         if isinstance(message, HumanMessage):
