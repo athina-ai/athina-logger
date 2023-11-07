@@ -31,7 +31,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
 
     def __init__(
         self,
-        prompt_slug: str,
+        prompt_slug: Optional[str] = 'default',
         environment: Optional[str] = 'production',
         session_id: Optional[str] = None,
         customer_id: Optional[str] = None,

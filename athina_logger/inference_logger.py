@@ -9,9 +9,9 @@ from .constants import LLM_MODELS_SUPPORTED
 class InferenceLogger(AthinaApiKey):
     @staticmethod
     def log_open_ai_chat_response(
-        prompt_slug: str,
         messages: List[Dict[str, Any]],
         model: str,
+        prompt_slug: Optional[str] = 'default',
         completion: Optional[Any] = None,
         prompt_response: Optional[str] = None,
         response_time: Optional[int] = None,
@@ -66,9 +66,9 @@ class InferenceLogger(AthinaApiKey):
 
     @staticmethod
     def log_open_ai_completion_response(
-        prompt_slug: str,
         prompt: str,
         model: str,
+        prompt_slug: Optional[str] = 'default',
         completion: Optional[Any] = None,
         prompt_response: Optional[str] = None,
         response_time: Optional[int] = None,
@@ -124,10 +124,10 @@ class InferenceLogger(AthinaApiKey):
 
     @staticmethod
     def log_generic_response(
-        prompt_slug: str,
         prompt: str,
         model: str,
         prompt_response: str,
+        prompt_slug: Optional[str] = 'default',
         prompt_tokens: Optional[int] = None,
         completion_tokens: Optional[int] = None,
         total_tokens: Optional[int] = None,
@@ -174,11 +174,11 @@ class InferenceLogger(AthinaApiKey):
 
     @staticmethod
     def log_langchain_llm_response(
-        prompt_slug: str,
         prompt_sent: str,
         prompt_response: str,
         model: str,
         response_time: int,
+        prompt_slug: Optional[str] = 'default',
         prompt_tokens: Optional[int] = None,
         completion_tokens: Optional[int] = None,
         total_tokens: Optional[int] = None,

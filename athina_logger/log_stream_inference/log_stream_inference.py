@@ -8,7 +8,7 @@ class LogStreamInference(ABC):
     """
 
     def __init__(self,
-                 prompt_slug: str,
+                 prompt_slug: Optional[str],
                  response_time: Optional[int] = None,
                  context: Optional[Dict] = None,
                  environment: Optional[str] = 'production',
@@ -19,7 +19,7 @@ class LogStreamInference(ABC):
                  external_reference_id: Optional[str] = None,):
         """
         constructor for log stream inference
-        :param prompt_slug: str - The slug of the prompt used for the inference.
+        :param prompt_slug: Optional[str] - The slug of the prompt used for the inference. Defaults to default.
         :param response_time: Optional[int] - The response time in milliseconds. Defaults to None.
         :param context: Optional[Dict] - A dictionary containing additional context information. Defaults to None.
         :param environment: Optional[str] - The environment in which the inference occurred. Defaults to production.
