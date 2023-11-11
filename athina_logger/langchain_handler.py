@@ -351,31 +351,3 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         message_dicts = [self._convert_message_to_dict(m) for m in messages]
         return message_dicts
-
-    def _extract_user_query_from_chat_model_prompts(self, messages):
-        try:
-            user_query = ''
-
-            for message_group in messages:
-                for message in message_group:
-                    if isinstance(message, HumanMessage):
-                        if user_query:
-                            user_query += '. '
-                        user_query += message.content
-
-            return user_query
-        except Exception as e:
-            return ''
-
-    def _extract_user_query_from_llm_prompts(self, prompts):
-        try:
-            user_query = ''
-            for prompt in prompts:
-                if isinstance(prompt, str):
-                    if user_query:
-                        user_query += '. '
-                    user_query += prompt
-
-            return user_query
-        except Exception as e:
-            return ''
