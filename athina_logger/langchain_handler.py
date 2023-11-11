@@ -32,6 +32,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
     def __init__(
         self,
         prompt_slug: str,
+        user_query: Optional[str] = None,
         environment: Optional[str] = 'production',
         session_id: Optional[str] = None,
         customer_id: Optional[str] = None,
@@ -46,6 +47,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             self.global_context = None
 
         self.prompt_slug = prompt_slug
+        self.user_query = user_query
         self.environment = environment
         self.session_id = session_id
         self.customer_id = customer_id
@@ -90,12 +92,11 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         try:
             for message in messages:
                 message_dicts = self._create_message_dicts(message)
-            user_query = self._extract_user_query_from_chat_model_prompts(
-                messages)
+
             self.runs[run_id] = {
                 'is_chat_model': True,
                 'prompt_slug': self.prompt_slug,
-                'user_query': user_query,
+                'user_query': self.user_query,
                 'context': self.global_context,
                 'prompt_sent': message_dicts,
                 'session_id': self.session_id,
@@ -140,7 +141,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             self.runs[run_id] = {
                 'is_chat_model': False,
                 'prompt_slug': self.prompt_slug,
-                'user_query': self._extract_user_query_from_llm_prompts(prompts),
+                'user_query': self.user_query,
                 'context': self.global_context,
                 'prompt_sent': {'text': ' '.join(prompts)},
                 'session_id': self.session_id,
@@ -350,31 +351,3 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         message_dicts = [self._convert_message_to_dict(m) for m in messages]
         return message_dicts
-
-    def _extract_user_query_from_chat_model_prompts(self, messages):
-        try:
-            user_query = ''
-
-            for message_group in messages:
-                for message in message_group:
-                    if isinstance(message, HumanMessage):
-                        if user_query:
-                            user_query += '. '
-                        user_query += message.content
-
-            return user_query
-        except Exception as e:
-            return ''
-
-    def _extract_user_query_from_llm_prompts(self, prompts):
-        try:
-            user_query = ''
-            for prompt in prompts:
-                if isinstance(prompt, str):
-                    if user_query:
-                        user_query += '. '
-                    user_query += prompt
-
-            return user_query
-        except Exception as e:
-            return ''
