@@ -3,7 +3,6 @@ from typing import List, Optional, Dict, Union, Any
 from .constants import API_BASE_URL
 from .api_key import AthinaApiKey
 from .request_helper import RequestHelper
-from .constants import LLM_MODELS_SUPPORTED
 
 
 class InferenceLogger(AthinaApiKey):
@@ -33,10 +32,6 @@ class InferenceLogger(AthinaApiKey):
             if completion is None and prompt_response is None:
                 raise ValueError(
                     'completion or prompt_response must be provided')
-
-            if model not in LLM_MODELS_SUPPORTED:
-                raise ValueError(
-                    f'Language model {model} is not supported. Supported models are: {LLM_MODELS_SUPPORTED}')
 
             payload = {
                 'prompt_slug': prompt_slug,
@@ -91,10 +86,6 @@ class InferenceLogger(AthinaApiKey):
                 raise ValueError(
                     'completion or prompt_response must be provided')
 
-            if model not in LLM_MODELS_SUPPORTED:
-                raise ValueError(
-                    f'Language model {model} is not supported. Supported models are: {LLM_MODELS_SUPPORTED}')
-
             payload = {
                 'prompt_slug': prompt_slug,
                 'prompt_text': prompt,
@@ -143,9 +134,6 @@ class InferenceLogger(AthinaApiKey):
         """
         track a generic language model response
         """
-        if model not in LLM_MODELS_SUPPORTED:
-            raise ValueError(
-                f'Language model {model} is not supported. Supported models are: {LLM_MODELS_SUPPORTED}')
         try:
             payload = {
                 'prompt_slug': prompt_slug,
