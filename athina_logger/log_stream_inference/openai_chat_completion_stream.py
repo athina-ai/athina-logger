@@ -71,8 +71,12 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
         """
         try:
             for stream_chunk in response:
-                self.prompt_response += self._get_text_from_stream_chunk(
-                    stream_chunk)
+                if isinstance(stream_chunk, dict):
+                    self.prompt_response += self._get_text_from_stream_chunk(
+                        stream_chunk)
+                else:
+                    self.prompt_response += self._get_text_from_stream_chunk(
+                        stream_chunk.model_dump())
         except Exception as e:
             raise e
 
@@ -81,8 +85,12 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
         collects the inference from the log stream of openai chat completion chunk by chunk
         """
         try:
-            self.prompt_response += self._get_text_from_stream_chunk(
-                stream_chunk)
+            if isinstance(stream_chunk, dict):
+                self.prompt_response += self._get_text_from_stream_chunk(
+                    stream_chunk)
+            else:
+                self.prompt_response += self._get_text_from_stream_chunk(
+                    stream_chunk.model_dump())
         except Exception as e:
             raise e
 
