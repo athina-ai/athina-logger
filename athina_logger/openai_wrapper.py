@@ -59,48 +59,6 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
         traceback.print_exc()
 
 
-def log_to_athina_open_1(result, args: dict, athina_meta: AthinaMeta):
-    try:
-        prompt_slug = "default"
-        context = None
-        customer_id = None
-        customer_user_id = None
-        response_time_ms = None
-        session_id = None
-        user_query = None
-        environment = "default"
-        external_reference_id = None
-
-        if athina_meta:
-            prompt_slug = athina_meta.prompt_slug
-            context = athina_meta.context
-            response_time_ms = athina_meta.response_time
-            customer_id = athina_meta.customer_id
-            customer_user_id = athina_meta.customer_user_id
-            session_id = athina_meta.session_id
-            user_query = athina_meta.user_query
-            environment = athina_meta.environment or "default"
-            external_reference_id = athina_meta.external_reference_id
-
-        InferenceLogger.log_open_ai_chat_response(
-            prompt_slug=prompt_slug,
-            messages=args["messages"],
-            model=args["model"],
-            completion=result.model_dump(),
-            context=context,
-            response_time=response_time_ms,
-            customer_id=customer_id,
-            customer_user_id=customer_user_id,
-            session_id=session_id,
-            user_query=user_query,
-            environment=environment,
-            external_reference_id=external_reference_id,
-        )
-    except Exception as e:
-        print("Exception while logging to Athina: ", e)
-        traceback.print_exc()
-
-
 class OpenAiMiddleware:
     _athina_meta: Optional[AthinaMeta]
     _args: Optional[any]
