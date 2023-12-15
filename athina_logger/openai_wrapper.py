@@ -125,7 +125,6 @@ class OpenAiMiddleware:
         version_numbers = tuple(map(int, openai_version.split('.')))
 
         if version_numbers < (1, 0, 0):
-            print("OpenAI version is less than 1.0.0")
             ChatCompletion = importlib.import_module(
                 "openai.api_resources").ChatCompletion
             openai_method_name = "create"
@@ -135,7 +134,6 @@ class OpenAiMiddleware:
             athina_method = self._with_athina_logging(openai_method)
             setattr(ChatCompletion, openai_method_name, athina_method)
         else:
-            print("OpenAI version is greater than 1.0.0")
             openai_method_name = "create"
             if openai_instance is not None:
                 openai_method = getattr(
