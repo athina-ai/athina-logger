@@ -58,7 +58,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
             choices = stream_chunk.get('choices', [])
             if choices and len(choices) > 0 and 'delta' in choices[0]:
                 delta = choices[0].get('delta', {})
-                if 'content' in delta:
+                if 'content' in delta and delta['content'] is not None:
                     text = delta.get('content', '')
 
             return text
