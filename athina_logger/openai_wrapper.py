@@ -1,3 +1,4 @@
+import importlib
 from dataclasses import dataclass
 import datetime
 import functools
@@ -5,11 +6,15 @@ import traceback
 import threading
 from typing import Callable, Optional, List
 import time
-import openai
-from openai.api_resources import ChatCompletion
 from .athina_meta import AthinaMeta
 from .inference_logger import InferenceLogger
 from .api_key import AthinaApiKey
+import openai
+
+
+# Check OpenAI version
+openai_version = openai.__version__
+version_numbers = tuple(map(int, openai_version.split('.')))
 
 
 def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
@@ -83,8 +88,6 @@ class OpenAiMiddleware:
 
             # Construct the Athina Meta object and log to Athina
             try:
-                prompt_messages = self._kwargs["messages"]
-
                 # Construct the Athina Meta object
                 if self._athina_meta is not None:
                     self._athina_meta.response_time = response_time_ms
@@ -100,7 +103,7 @@ class OpenAiMiddleware:
                     api_thread = threading.Thread(
                         target=log_to_athina,
                         kwargs={
-                            "result": openai_response,
+                            "result": openai_response if version_numbers < (1, 0, 0) else openai_response.model_dump(),
                             "args": self._kwargs,
                             "athina_meta": self._athina_meta,
                         },
@@ -117,14 +120,43 @@ class OpenAiMiddleware:
         return wrapper
 
     # Apply the Athina logging wrapper to OpenAI methods
-    def apply_athina(self):
-        openai_method_name = "create"
-        openai_method = getattr(ChatCompletion, openai_method_name)
+    def apply_athina(self, openai_instance=None):
+        openai_version = openai.__version__
+        version_numbers = tuple(map(int, openai_version.split('.')))
 
-        # Override the create method with the Athina logging wrapper
-        athina_method = self._with_athina_logging(openai_method)
-        setattr(ChatCompletion, openai_method_name, athina_method)
+        if version_numbers < (1, 0, 0):
+            ChatCompletion = importlib.import_module(
+                "openai.api_resources").ChatCompletion
+            openai_method_name = "create"
+            openai_method = getattr(ChatCompletion, openai_method_name)
+
+            # Override the create method with the Athina logging wrapper
+            athina_method = self._with_athina_logging(openai_method)
+            setattr(ChatCompletion, openai_method_name, athina_method)
+        else:
+            openai_method_name = "create"
+            if openai_instance is not None:
+                openai_method = getattr(
+                    openai_instance.chat.completions, openai_method_name)
+
+                # Override the chat.completions.create method with the Athina logging wrapper
+                athina_method = self._with_athina_logging(openai_method)
+                setattr(openai_instance.chat.completions,
+                        openai_method_name, athina_method)
 
 
 middleware = OpenAiMiddleware()
 middleware.apply_athina()
+
+
+if version_numbers > (1, 0, 0):
+    # Monkey-patch the constructor of openai.OpenAI
+    original_openai_constructor = importlib.import_module(
+        "openai").OpenAI.__init__
+
+    def new_openai_constructor(self, *args, **kwargs):
+        original_openai_constructor(self, *args, **kwargs)
+        middleware.apply_athina(self)
+
+    importlib.import_module(
+        "openai").OpenAI.__init__ = new_openai_constructor
