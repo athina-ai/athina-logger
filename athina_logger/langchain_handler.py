@@ -98,7 +98,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'prompt_slug': self.prompt_slug,
                 'user_query': self.user_query,
                 'context': self.global_context,
-                'prompt_sent': message_dicts,
+                'prompt': message_dicts,
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
                 'customer_user_id': self.customer_user_id,
@@ -143,7 +143,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'prompt_slug': self.prompt_slug,
                 'user_query': self.user_query,
                 'context': self.global_context,
-                'prompt_sent': {'text': ' '.join(prompts)},
+                'prompt': {'text': ' '.join(prompts)},
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
                 'customer_user_id': self.customer_user_id,
@@ -179,12 +179,12 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
 
             for i in range(len(response.generations)):
                 generation = response.generations[i][0]
-                prompt_response = generation.text
+                response_text = generation.text
                 llm_output = response.llm_output
-                token_usage = self._get_llm_usage(llm_output=llm_output, prompt_sent=run_info['prompt_sent'],
-                                                  prompt_response=prompt_response, model=run_info['language_model_id'], is_chat_model=run_info['is_chat_model'])
+                token_usage = self._get_llm_usage(llm_output=llm_output, prompt=run_info['prompt'],
+                                                response=response_text, language_model_id=run_info['language_model_id'], is_chat_model=run_info['is_chat_model'])
 
-                run_info['prompt_response'] = prompt_response
+                run_info['response'] = response_text
                 run_info['prompt_tokens'] = token_usage['prompt_tokens']
                 run_info['completion_tokens'] = token_usage['completion_tokens']
                 run_info['total_tokens'] = token_usage['total_tokens']
@@ -238,7 +238,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         """Do nothing"""
         pass
 
-    def _get_llm_usage(self, llm_output: Dict, prompt_sent, prompt_response, model, is_chat_model) -> Dict:
+    def _get_llm_usage(self, llm_output: Dict, prompt, response, language_model_id, is_chat_model) -> Dict:
         """
         Fetch prompt tokens, completion tokens and total tokens from llm output
         """
@@ -251,18 +251,18 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         else:
             if is_chat_model:
                 prompt_tokens = self._get_prompt_tokens_chat_model(
-                    messages=prompt_sent, model=model)
+                    prompt=prompt, language_model_id=language_model_id)
                 completion_tokens = self._get_completion_tokens_chat_model(
-                    response=prompt_response, model=model)
+                    response=response, language_model_id=language_model_id)
                 if prompt_tokens is not None and completion_tokens is not None:
                     total_tokens = prompt_tokens + completion_tokens
                 else:
                     total_tokens = None
             else:
                 prompt_tokens = self._get_token_usage_completion_model(
-                    text=prompt_sent, model=model)
+                    text=prompt, language_model_id=language_model_id)
                 completion_tokens = self._get_token_usage_completion_model(
-                    text=prompt_response, model=model)
+                    text=prompt, language_model_id=language_model_id)
                 if prompt_tokens is not None and completion_tokens is not None:
                     total_tokens = prompt_tokens + completion_tokens
                 else:
@@ -273,35 +273,35 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             'total_tokens': total_tokens
         }
 
-    def _get_prompt_tokens_chat_model(self, messages: List[Dict[str, Any]], model: str):
+    def _get_prompt_tokens_chat_model(self, prompt: List[Dict[str, Any]], language_model_id: str):
         """
-        gets the prompt tokens given the messages array
+        gets the prompt tokens given the prompt
         """
         try:
             tokens = get_prompt_tokens_openai_chat_completion(
-                messages=messages, model=model)
+                prompt=prompt, language_model_id=language_model_id)
             return tokens
         except Exception as e:
             return None
 
-    def _get_completion_tokens_chat_model(self, response: str, model: str):
+    def _get_completion_tokens_chat_model(self, response: str, language_model_id: str):
         """
         gets the completion tokens given the prompt response from the openai chat model completion
         """
         try:
             tokens = get_completion_tokens_openai_chat_completion(
-                response=response, model=model)
+                response=response, language_model_id=language_model_id)
             return tokens
         except Exception as e:
             return None
 
-    def _get_token_usage_completion_model(self, text: str, model: str):
+    def _get_token_usage_completion_model(self, text: str, language_model_id: str):
         """
         gets the token usage given the prompt or prompt response for the openai completion model
         """
         try:
             tokens = get_token_usage_openai_completion(
-                text=text, model=model)
+                text=text, language_model_id=language_model_id)
             return tokens
         except Exception as e:
             return None
@@ -311,8 +311,8 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         Logs the LLM response to athina
         """
         try:
-            InferenceLogger.log_langchain_llm_response(prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
-                                                       prompt_response=run_info['prompt_response'], model=run_info['language_model_id'],
+            InferenceLogger.log_inference(prompt_slug=run_info['prompt_slug'], prompt=run_info['prompt'],
+                                                        response=run_info['response'], language_model_id=run_info['language_model_id'],
                                                        prompt_tokens=run_info['prompt_tokens'], completion_tokens=run_info[
                                                            'completion_tokens'],
                                                        total_tokens=run_info['total_tokens'], response_time=run_info['response_time'],
