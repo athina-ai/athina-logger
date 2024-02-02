@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from ..constants import LOG_OPENAI_COMPLETION_URL
+from ..constants import LOG_INFERENCE_URL
 from .log_stream_inference import LogStreamInference
 from ..api_key import AthinaApiKey
 from ..request_helper import RequestHelper
@@ -10,7 +10,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
     def __init__(self,
                  prompt_slug: str,
                  prompt: str,
-                 model: str,
+                 language_model_id: str,
                  response_time: Optional[int] = None,
                  context: Optional[Dict] = None,
                  environment: Optional[str] = 'production',
@@ -23,7 +23,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
         :param prompt: str - The prompt used for the inference.
-        :param model: str - The model used for the inference.
+        :param language_model_id: str - The model used for the inference.
         :param response_time: Optional[int] - The response time in milliseconds. Defaults to None.
         :param context: Optional[Dict] - A dictionary containing additional context information. Defaults to None.
         :param environment: Optional[str] - The environment in which the inference occurred. Defaults to production.
@@ -44,9 +44,8 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
             user_query=user_query,
             external_reference_id=external_reference_id,)
         self.prompt = prompt
-        self.model = model
-        self.prompt_response = ''
-        self.log_endpoint = LOG_OPENAI_COMPLETION_URL
+        self.language_model_id = language_model_id
+        self.response = ''
 
     def _get_text_from_stream_chunk(self, stream_chunk):
         """
@@ -68,7 +67,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
         """
         try:
             for stream_chunk in response:
-                self.prompt_response += self._get_text_from_stream_chunk(
+                self.response += self._get_text_from_stream_chunk(
                     stream_chunk)
         except Exception as e:
             raise e
@@ -78,7 +77,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
         collects the inference from the log stream of openai chat completion chunk by chunk
         """
         try:
-            self.prompt_response += self._get_text_from_stream_chunk(
+            self.response += self._get_text_from_stream_chunk(
                 stream_chunk)
         except Exception as e:
             raise e
@@ -89,18 +88,18 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
         """
         try:
             prompt_tokens = self._get_prompt_tokens(
-                prompt=self.prompt, model=self.model)
+                prompt=self.prompt, language_model_id=self.language_model_id)
             completion_tokens = self._get_completion_tokens(
-                response=self.prompt_response, model=self.model)
+                response=self.response, language_model_id=self.language_model_id)
             if prompt_tokens is not None and completion_tokens is not None:
                 total_tokens = prompt_tokens + completion_tokens
             else:
                 total_tokens = None
             payload = {
                 'prompt_slug': self.prompt_slug,
-                'prompt_text': self.prompt,
-                'language_model_id': self.model,
-                'prompt_response': self.prompt_response,
+                'prompt': self.prompt,
+                'language_model_id': self.language_model_id,
+                'response': self.response,
                 'response_time': self.response_time,
                 'context': self.context,
                 'environment': self.environment,
@@ -115,30 +114,30 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            RequestHelper.make_post_request(endpoint=self.log_endpoint, payload=payload, headers={
+            RequestHelper.make_post_request(endpoint=LOG_INFERENCE_URL, payload=payload, headers={
                 'athina-api-key': LogOpenAiCompletionStreamInference.get_api_key(),
             })
         except Exception as e:
             raise e
 
-    def _get_prompt_tokens(self, prompt: str, model: str):
+    def _get_prompt_tokens(self, prompt: str, language_model_id: str):
         """
         gets the prompt tokens given the prompt for the openai chat model completion
         """
         try:
             tokens = get_token_usage_openai_completion(
-                text=prompt, model=model)
+                text=prompt, language_model_id=language_model_id)
             return tokens
         except Exception as e:
             return None
 
-    def _get_completion_tokens(self, response: str, model: str):
+    def _get_completion_tokens(self, response: str, language_model_id: str):
         """
         gets the completion tokens given the prompt response from the openai chat model completion
         """
         try:
             tokens = get_token_usage_openai_completion(
-                text=response, model=model)
+                text=response, language_model_id=language_model_id)
             return tokens
         except Exception as e:
             return None
