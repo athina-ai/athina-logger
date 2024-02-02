@@ -262,7 +262,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 prompt_tokens = self._get_token_usage_completion_model(
                     text=prompt, language_model_id=language_model_id)
                 completion_tokens = self._get_token_usage_completion_model(
-                    text=prompt, language_model_id=language_model_id)
+                    text=response, language_model_id=language_model_id)
                 if prompt_tokens is not None and completion_tokens is not None:
                     total_tokens = prompt_tokens + completion_tokens
                 else:

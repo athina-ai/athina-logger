@@ -98,7 +98,7 @@ class LogOpenAiCompletionStreamInference(LogStreamInference, AthinaApiKey):
             payload = {
                 'prompt_slug': self.prompt_slug,
                 'prompt': self.prompt,
-                'language_model_id': self.model,
+                'language_model_id': self.language_model_id,
                 'response': self.response,
                 'response_time': self.response_time,
                 'context': self.context,
