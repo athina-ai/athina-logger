@@ -26,7 +26,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
         response_time_ms = None
         session_id = None
         user_query = None
-        environment = "default"
+        environment = "production"
         external_reference_id = None
 
         if athina_meta:
@@ -37,14 +37,14 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             customer_user_id = athina_meta.customer_user_id
             session_id = athina_meta.session_id
             user_query = athina_meta.user_query
-            environment = athina_meta.environment or "default"
+            environment = athina_meta.environment or "production"
             external_reference_id = athina_meta.external_reference_id
 
-        InferenceLogger.log_open_ai_chat_response(
+        InferenceLogger.log_inference(
             prompt_slug=prompt_slug,
-            messages=args["messages"],
-            model=args["model"],
-            completion=result,
+            prompt=args["messages"],
+            language_model_id=args["model"],
+            response=result,
             context=context,
             response_time=response_time_ms,
             customer_id=customer_id,
