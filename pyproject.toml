@@ -2,7 +2,7 @@
 name = "athina-logger"
 version = "1.0.2"
 description = ""
-authors = ["Akshat Gupta <akshat@athina.ai>", "Shiv Sakhuja <shiv@athina.ai>", "Akhil Bisht" <akhil@athina.ai>]
+authors = ["Akshat Gupta <akshat@athina.ai>", "Shiv Sakhuja <shiv@athina.ai>", "Akhil Bisht <akhil@athina.ai>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
