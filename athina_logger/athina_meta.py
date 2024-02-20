@@ -15,3 +15,4 @@ class AthinaMeta:
     customer_id: Optional[str] = None
     customer_user_id: Optional[str] = None
     response_time: Optional[int] = None
+    custom_attributes: Optional[dict] = None

@@ -28,6 +28,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
         user_query = None
         environment = "production"
         external_reference_id = None
+        custom_attributes = None
 
         if athina_meta:
             prompt_slug = athina_meta.prompt_slug
@@ -39,6 +40,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             user_query = athina_meta.user_query
             environment = athina_meta.environment or "production"
             external_reference_id = athina_meta.external_reference_id
+            custom_attributes = athina_meta.custom_attributes
 
         InferenceLogger.log_inference(
             prompt_slug=prompt_slug,
@@ -53,6 +55,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             user_query=user_query,
             environment=environment,
             external_reference_id=external_reference_id,
+            custom_attributes=custom_attributes,
         )
     except Exception as e:
         print("Exception while logging to Athina: ", e)

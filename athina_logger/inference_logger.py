@@ -29,6 +29,7 @@ class InferenceLogger(AthinaApiKey):
         response_time: Optional[int] = None,
         context: Optional[Dict] = None,
         expected_response: Optional[str] = None,
+        custom_attributes: Optional[Dict] = None,
     ) -> None:
         """
         logs the llm inference to athina
@@ -55,6 +56,7 @@ class InferenceLogger(AthinaApiKey):
                 'completion_tokens': completion_tokens,
                 'total_tokens': total_tokens,
                 'expected_response': expected_response,
+                'custom_attributes': custom_attributes,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
