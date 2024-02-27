@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "athina-logger"
-version = "1.0.2"
+version = "1.0.3"
 description = ""
 authors = ["Akshat Gupta <akshat@athina.ai>", "Shiv Sakhuja <shiv@athina.ai>", "Akhil Bisht <akhil@athina.ai>"]
 readme = "README.md"
