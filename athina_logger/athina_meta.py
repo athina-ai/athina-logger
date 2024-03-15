@@ -16,3 +16,4 @@ class AthinaMeta:
     customer_user_id: Optional[str] = None
     response_time: Optional[int] = None
     custom_attributes: Optional[dict] = None
+    custom_eval_metrics: Optional[dict] = None
