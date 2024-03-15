@@ -20,7 +20,8 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
                  session_id: Optional[str] = None,
                  user_query: Optional[str] = None,
                  external_reference_id: Optional[str] = None,
-                 custom_attributes: Optional[Dict] = None):
+                 custom_attributes: Optional[Dict] = None,
+                 custom_eval_metrics: Optional[Dict] = None):
         """
         constructor for log stream inference
         :param prompt_slug: str - The slug of the prompt used for the inference.
@@ -35,6 +36,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
         :param user_query: Optional[str] - The user's query or input. Defaults to None.
         :param external_reference_id: Optional[str] - The external reference id. Defaults to None.
         :param custom_attributes: Optional[Dict] - A dictionary containing custom attributes. Defaults to None.
+        :param custom_eval_metrics: Optional[Dict] - A dictionary containing custom evaluation metrics. Defaults to None.
         """
         super().__init__(
             prompt_slug=prompt_slug,
@@ -46,7 +48,8 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
             session_id=session_id,
             user_query=user_query,
             external_reference_id=external_reference_id,
-            custom_attributes=custom_attributes)
+            custom_attributes=custom_attributes,
+            custom_eval_metrics=custom_eval_metrics)
         self.prompt = prompt
         self.language_model_id = language_model_id
         self.response = ''
@@ -128,6 +131,7 @@ class LogOpenAiChatCompletionStreamInference(LogStreamInference, AthinaApiKey):
                 'completion_tokens': completion_tokens,
                 'total_tokens': total_tokens,
                 'custom_attributes': self.custom_attributes,
+                'custom_eval_metrics': self.custom_eval_metrics,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}

@@ -31,6 +31,7 @@ class InferenceLogger(AthinaApiKey):
         context: Optional[Dict] = None,
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
+        custom_eval_metrics: Optional[Dict] = None,
         cost: Optional[float] = None,
     ) -> None:
         try:
@@ -69,6 +70,7 @@ class InferenceLogger(AthinaApiKey):
                 'total_tokens': total_tokens,
                 'expected_response': expected_response,
                 'custom_attributes': custom_attributes,
+                'custom_eval_metrics': custom_eval_metrics,
                 'cost': cost,
             }
             # Remove None fields from the payload
