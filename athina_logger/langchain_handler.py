@@ -39,6 +39,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         customer_user_id: Optional[str] = None,
         external_reference_id: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
+        custom_eval_metrics: Optional[Dict] = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the CallbackHandler"""
@@ -55,6 +56,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         self.customer_user_id = customer_user_id
         self.external_reference_id = external_reference_id
         self.custom_attributes = custom_attributes
+        self.custom_eval_metrics = custom_eval_metrics
         self.runs: Dict[UUID, Dict[str, Any]] = {}
 
     def on_retriever_end(
@@ -106,6 +108,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'customer_user_id': self.customer_user_id,
                 'external_reference_id': self.external_reference_id,
                 'custom_attributes': self.custom_attributes,
+                'custom_eval_metrics': self.custom_eval_metrics,
                 'llm_start_time': datetime.now(timezone.utc),
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
@@ -152,6 +155,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'customer_user_id': self.customer_user_id,
                 'external_reference_id': self.external_reference_id,
                 'custom_attributes': self.custom_attributes,
+                'custom_eval_metrics': self.custom_eval_metrics,
                 'llm_start_time': datetime.now(timezone.utc),
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
@@ -323,7 +327,8 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                                                        environment=self.environment, context=run_info[
                 'context'], user_query=run_info['user_query'],
                 customer_id=run_info['customer_id'], session_id=run_info['session_id'],
-                customer_user_id=run_info['customer_user_id'], external_reference_id=run_info['external_reference_id'],custom_attributes=run_info['custom_attributes'])
+                customer_user_id=run_info['customer_user_id'], external_reference_id=run_info['external_reference_id'],custom_attributes=run_info['custom_attributes'], 
+                custom_eval_metrics=run_info['custom_eval_metrics'])
 
         except Exception as e:
             exception_message = (
