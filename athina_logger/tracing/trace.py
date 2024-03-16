@@ -150,7 +150,7 @@ class Trace(AthinaApiKey):
         attributes: Optional[Dict[str, Any]] = None,
     ):
         if end_time:
-            self._trace.end_time = end_time.utcnow()
+            self._trace.end_time = end_time.utcnow().isoformat()
         if status:
             self._trace.status = status
         if attributes:
