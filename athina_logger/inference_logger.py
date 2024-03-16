@@ -3,7 +3,8 @@ from typing import List, Optional, Dict, Union, Any
 from .constants import API_BASE_URL
 from .api_key import AthinaApiKey
 from .request_helper import RequestHelper
-
+import asyncio
+import threading
 
 class InferenceLogger(AthinaApiKey):
 
@@ -31,6 +32,16 @@ class InferenceLogger(AthinaApiKey):
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
         cost: Optional[float] = None,
+    ) -> None:
+        try:
+            args = (prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost)
+            threading.Thread(target=lambda: asyncio.run(InferenceLogger._log_inference_asynchronously(*args))).start()
+        except Exception as e:
+            print("Error in logging inference to Athina: ", str(e))
+
+    @staticmethod
+    async def _log_inference_asynchronously(
+        prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost
     ) -> None:
         """
         logs the llm inference to athina
@@ -66,4 +77,4 @@ class InferenceLogger(AthinaApiKey):
                 'athina-api-key': InferenceLogger.get_api_key(),
             })
         except Exception as e:
-            raise e
+            print("Error in logging inference to Athina: ", str(e))
