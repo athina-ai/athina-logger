@@ -1,11 +1,11 @@
 
 import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class TraceCreateModel(BaseModel):
     name: str
-    start_time: str = datetime.datetime.now()
+    start_time: str = Field(default_factory=datetime.datetime.utcnow)
     end_time: Optional[str] = None
     duration: Optional[int] = None
     status: Optional[str] = None
@@ -14,7 +14,7 @@ class TraceCreateModel(BaseModel):
 
 class SpanCreateModel(BaseModel):
     name: str
-    start_time: str
+    start_time: str = Field(default_factory=datetime.datetime.utcnow)
     span_type: str = "span"
     end_time: Optional[str] = None
     duration: Optional[int] = None
@@ -23,32 +23,3 @@ class SpanCreateModel(BaseModel):
     input: Optional[dict] = None
     output: Optional[dict] = None
     version: Optional[str] = None
-
-# class Trace(BaseModel):
-#     id: str
-#     trace_type: str
-#     start_time: str # optional , if not passed
-#     end_time: str
-#     duration: int
-#     status: str
-#     attributes: dict
-#     # Athina Fields
-#     org_id: str
-#     created_at: str
-#     updated_at: str
-
-
-# class Span(BaseModel):
-#     id: str
-#     trace_id: str
-#     parent_id: str
-#     span_type: str
-#     start_time: str
-#     end_time: str
-#     duration: int
-#     status: str
-#     attributes: dict
-#     input: dict
-#     output: dict
-#     created_at: str
-#     updated_at: str

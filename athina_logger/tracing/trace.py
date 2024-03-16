@@ -1,15 +1,44 @@
 import json
-from time import sleep
-from constants import API_BASE_URL
-from api_key import AthinaApiKey
-from request_helper import RequestHelper
-import requests
 import datetime
-from typing import Optional
-from models import SpanCreateModel, TraceCreateModel
+from typing import Any, Dict, List, Optional, Union
 
-class Span:
+import requests
+from .span import Generation, Span
+from .models import TraceCreateModel
+from .util import remove_none_values
+from athina_logger.api_key import AthinaApiKey
+from athina_logger.constants import API_BASE_URL
+from athina_logger.request_helper import RequestHelper
+
+class Trace(AthinaApiKey):
+    _trace: TraceCreateModel
+    _spans: list[Span]
+
     def __init__(
+        self,
+        name: str,
+        start_time: Optional[datetime.datetime] = None,
+        end_time: Optional[datetime.datetime] = None,
+        status: Optional[str] = None,
+        attributes: Optional[dict] = None,
+        duration: Optional[int] = None,
+        version: Optional[str] = None,
+    ):        
+        self._trace = TraceCreateModel(
+            name=name,
+            start_time=(start_time or datetime.datetime.utcnow()).isoformat(),
+            end_time=end_time.isoformat() if end_time else None,
+            status=status,
+            attributes=attributes or {},
+            duration=duration,
+            version=version,
+        )
+        self._spans = []
+
+    def __repr__(self):
+        return f"Trace(name={self._trace.name}, dict={remove_none_values(self.to_dict())},  spans={self._spans})"
+
+    def add_span(
         self,
         name: str,
         start_time: Optional[datetime.datetime] = None,
@@ -20,205 +49,130 @@ class Span:
         input: Optional[dict] = None,
         output: Optional[dict] = None,
         duration: Optional[int] = None,
-    ):
-        if start_time is None:
-            start_time = datetime.datetime.now()
-        if attributes is None:
-            attributes = {}
-        if input is None:
-            input = {}
-        if output is None:
-            output = {}
-        
-        self._span = SpanCreateModel(
+        version: Optional[str] = None,
+    )-> Span:
+        span = Span(
             name=name,
-            span_type=span_type,
-            start_time=start_time.isoformat(),
+            start_time=(start_time or datetime.datetime.utcnow()),
             end_time=end_time,
+            span_type=span_type,
+            status=status,
+            attributes=attributes or {},
+            input=input or {},
+            output=output or {},
+            duration=duration,
+            version=version,
+        )
+        self._spans.append(span)
+        return span
+
+    def add_generation(
+        self,
+        name: str,
+        start_time: Optional[datetime.datetime] = None,
+        end_time: Optional[datetime.datetime] = None,
+        span_type: str = "generation",
+        status: Optional[str] = None,
+        attributes: Optional[dict] = None,
+        input: Optional[dict] = None,
+        output: Optional[dict] = None,
+        duration: Optional[int] = None,
+        version: Optional[str] = None,
+        prompt: Optional[Union[List[Dict[str, Any]], Dict[str, Any], str]] = None,
+        response: Optional[Any] = None,
+        prompt_slug: Optional[str] = None,
+        language_model_id: Optional[str] = None,
+        environment: Optional[str] = None,
+        functions: Optional[List[Dict]] = None,
+        function_call_response: Optional[Any] = None,
+        tools: Optional[Any] = None,
+        tool_calls: Optional[Any] = None,
+        external_reference_id: Optional[str] = None,
+        customer_id: Optional[str] = None,
+        customer_user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        user_query: Optional[str] = None,
+        prompt_tokens: Optional[int] = None,
+        completion_tokens: Optional[int] = None,
+        total_tokens: Optional[int] = None,
+        response_time: Optional[int] = None,
+        context: Optional[Dict] = None,
+        expected_response: Optional[str] = None,
+        custom_attributes: Optional[Dict] = None,
+        cost: Optional[float] = None,
+    ) -> Generation:
+        span = Generation(
+            name=name,
+            start_time=(start_time or datetime.datetime.utcnow()),
+            end_time=end_time,
+            span_type=span_type,
             status=status,
             attributes=attributes,
             input=input,
             output=output,
             duration=duration,
-        )
-        self._children = []
-
-    def __repr__(self):
-        return f"Span(name={self._span.name}, children={self._children})"
-
-    def to_dict(self):
-        return {
-            "span": self._span.model_dump(),
-            "children": [span.to_dict() for span in self._children]
-        }
-    
-    def span(
-        self,
-        name: str,
-        start_time: Optional[datetime.datetime] = None,
-        end_time: Optional[datetime.datetime] = None,
-        span_type: str = "span",
-        status: Optional[str] = None,
-        attributes: Optional[dict] = None,
-        input_data: Optional[dict] = None,
-        output_data: Optional[dict] = None,
-        duration: Optional[int] = None,
-    ):
-        span = Span(
-            name=name,
-            start_time=start_time or datetime.datetime.now(),
-            end_time=end_time,
-            span_type=span_type,
-            status=status,
-            attributes=attributes or {},
-            input=input_data or {},
-            output=output_data or {},
-            duration=duration,
-        )
-        self._children.append(span)
-        return span
-
-    def generation(
-        self,
-        name: str,
-        start_time: Optional[datetime.datetime] = None,
-        end_time: Optional[datetime.datetime] = None,
-        status: Optional[str] = None,
-        attributes: Optional[dict] = None,
-        input_data: Optional[dict] = None,
-        output_data: Optional[dict] = None,
-        duration: Optional[int] = None,
-    ):
-        return self.span(
-            name=name,
-            start_time=start_time,
-            end_time=end_time,
-            span_type="generation",
-            status=status,
-            attributes=attributes,
-            input_data=input_data,
-            output_data=output_data,
-            duration=duration,
-        )   
-
-    def end(self, end_time: Optional[datetime.datetime] = None):
-        if end_time is None:
-            end_time = datetime.datetime.now()
-        self._span.end_time = end_time.isoformat()
-        self._span.duration = int((end_time - datetime.datetime.fromisoformat(self._span.start_time)).total_seconds())
-        for child in self._children:
-            if child._span.end_time is None:
-                child.end(end_time)            
-
-class Trace(AthinaApiKey):
-    def __init__(
-        self,
-        name: str,
-        start_time: Optional[datetime.datetime] = None,
-        end_time: Optional[datetime.datetime] = None,
-        status: Optional[str] = None,
-        attributes: Optional[dict] = None,
-        duration: Optional[int] = None,
-    ):
-        if start_time is None:
-            start_time = datetime.datetime.now() 
-        
-        self._trace = TraceCreateModel(
-            name=name,
-            start_time=start_time.isoformat(),
-            end_time=end_time,
-            status=status,
-            attributes=attributes,
-            duration=duration,
-        )
-        self._spans = []
-
-    def __repr__(self):
-        return f"Trace(name={self._trace.name}, spans={self._spans})"
-
-    def span(
-        self,
-        name: str,
-        start_time: Optional[datetime.datetime] = None,
-        end_time: Optional[datetime.datetime] = None,
-        span_type: str = "span",
-        status: Optional[str] = None,
-        attributes: Optional[dict] = None,
-        input_data: Optional[dict] = None,
-        output_data: Optional[dict] = None,
-        duration: Optional[int] = None,
-    )-> Span:
-        if start_time is None:
-            start_time = datetime.datetime.now()
-        if attributes is None:
-            attributes = {}
-        if input_data is None:
-            input_data = {}
-        if output_data is None:
-            output_data = {}
-
-        span = Span(
-            name=name,
-            start_time=start_time,
-            end_time=end_time,
-            span_type=span_type,
-            status=status,
-            attributes=attributes,
-            input=input_data,
-            output=output_data,
-            duration=duration,
+            version=version,
+            prompt=prompt,
+            response=response,
+            prompt_slug=prompt_slug,
+            language_model_id=language_model_id,
+            environment=environment,
+            functions=functions,
+            function_call_response=function_call_response,
+            tools=tools,
+            tool_calls=tool_calls,
+            external_reference_id=external_reference_id,
+            customer_id=customer_id,
+            customer_user_id=customer_user_id,
+            session_id=session_id,
+            user_query=user_query,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            response_time=response_time,
+            context=context,
+            expected_response=expected_response,
+            custom_attributes=custom_attributes,
+            cost=cost,
         )
         self._spans.append(span)
         return span
     
     def to_dict(self):
-        return {
-            "trace": self._trace.model_dump(),
-            "spans": [span.to_dict() for span in self._spans]
-        }
+        trace_dict = { "trace": self._trace.model_dump() }
+        trace_dict["trace"]["spans"] = [span.to_dict() for span in self._spans]
+        return trace_dict
 
-    def end(self):
+    def update(
+        self,
+        end_time: Optional[datetime.datetime] = None,
+        duration: Optional[int] = None,
+        status: Optional[str] = None,
+        attributes: Optional[Dict[str, Any]] = None,
+    ):
+        if end_time:
+            self._trace.end_time = end_time.utcnow()
+        if status:
+            self._trace.status = status
+        if attributes:
+            self._trace.attributes = attributes
+        if duration:
+            self._trace.duration = duration
+
+    def end(self, end_time: Optional[datetime.datetime] = datetime.datetime.utcnow()):
         for span in self._spans:
-            if span._span.end_time is None:
-                span.end()
+            span.end(end_time)
         if self._trace.end_time is None:
-            end_time = datetime.datetime.now()
-            self._trace.end_time = end_time.isoformat()
+           self._trace.end_time = end_time.utcnow().isoformat()
+        if self._trace.duration is None:
             self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
-        data = json.dumps(self.to_dict())
-        # response = requests.post("https://8e714940905f4022b43267e348b8a713.api.mockbin.io/", headers= {'Content-Type': 'application/json'}, data=data)
-        response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/inference', payload=data, headers={
-            'athina-api-key': Trace.get_api_key(),
-        })
+        request_dict = remove_none_values(self.to_dict())
+        data = json.dumps(request_dict)
+        response = requests.post("https://8e714940905f4022b43267e348b8a713.api.mockbin.io/", headers= {'Content-Type': 'application/json'}, data=data)
+        # response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/inference', payload=data, headers={
+        #     'athina-api-key': Trace.get_api_key(),
+        # })
         if response.status_code == 200:
             print("Trace and spans successfully saved.")
         else:
             print(f"Failed to save trace and spans. Status Code: {response.status_code}")
-
-if __name__ == "__main__":
-    # Create a Trace
-    print("\nStarting Trace:")
-    trace = Trace(name="trace_1")
-    print(trace)
-
-    print("\nAssociate Spans with the Trace")
-    span1 = trace.span(name="span_1")
-    span2 = trace.span(name="span_2")
-    print("\nCurrent Trace:")
-    print(trace)
-
-    print("\nAdd a child Span to one of the Spans")
-    print(span1)
-    span1.span(name="span_3")
-    print(span1)
-
-    print("\nAdd a child Span(Generation type) to one of the Spans")
-    print(span2)
-    span2.generation(name="generation_1")
-    print(span2)
-
-    print("\nFinal Trace:")
-    print(trace)
-    sleep(2)
-    trace.end()
-    print("\nEnd the Trace")
