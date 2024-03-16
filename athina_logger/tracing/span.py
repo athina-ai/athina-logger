@@ -40,8 +40,8 @@ class Span:
         return f"Span(name={self._span.name}, dict={remove_none_values(self.to_dict())}, children={self._children})"
 
     def to_dict(self):
-        span_dict = { "span": self._span.model_dump() }
-        span_dict["span"]["children"] = [child.to_dict() for child in self._children]
+        span_dict = self._span.model_dump()
+        span_dict["children"] = [child.to_dict() for child in self._children]
         return span_dict
 
     def add_span(

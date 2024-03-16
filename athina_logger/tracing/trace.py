@@ -138,8 +138,8 @@ class Trace(AthinaApiKey):
         return span
     
     def to_dict(self):
-        trace_dict = { "trace": self._trace.model_dump() }
-        trace_dict["trace"]["spans"] = [span.to_dict() for span in self._spans]
+        trace_dict = self._trace.model_dump()
+        trace_dict["spans"] = [span.to_dict() for span in self._spans]
         return trace_dict
 
     def update(
