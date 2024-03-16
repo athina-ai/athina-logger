@@ -17,7 +17,7 @@ class RequestHelper:
                 json=payload,
                 headers=headers,
             )
-            if response.status_code != 200:
+            if response.status_code != 200 and response.status_code != 201:
                 response_json = response.json()
                 error_message = response_json.get('error', 'Unknown Error')
                 details_message = response_json.get(
