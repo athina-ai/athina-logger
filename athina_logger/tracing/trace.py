@@ -159,18 +159,16 @@ class Trace(AthinaApiKey):
             self._trace.duration = duration
 
     def end(self, end_time: Optional[datetime.datetime] = datetime.datetime.utcnow()):
-        for span in self._spans:
-            span.end(end_time)
-        if self._trace.end_time is None:
-           self._trace.end_time = end_time.utcnow().isoformat()
-        if self._trace.duration is None:
-            self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
-        request_dict = remove_none_values(self.to_dict())
-        data = json.dumps(request_dict)
-        response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/trace/sdk', payload=data, headers={
-            'athina-api-key': Trace.get_api_key(),
-        })
-        if response.status_code == 200:
-            print("Trace and spans successfully saved.")
-        else:
-            print(f"Failed to save trace and spans. Status Code: {response.status_code}")
+        try:
+            for span in self._spans:
+                span.end(end_time)
+            if self._trace.end_time is None:
+                self._trace.end_time = end_time.utcnow().isoformat()
+            if self._trace.duration is None:
+                self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
+            request_dict = remove_none_values(self.to_dict())
+            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/trace/sdk', payload=request_dict, headers={
+                "athina-api-key": Trace.get_api_key(), "Content-Type": "application/json"
+            })
+        except Exception as e:
+            print("Error ending trace: ", e)
