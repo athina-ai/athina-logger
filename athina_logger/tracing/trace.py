@@ -2,7 +2,6 @@ import json
 import datetime
 from typing import Any, Dict, List, Optional, Union
 
-import requests
 from .span import Generation, Span
 from .models import TraceCreateModel
 from .util import remove_none_values
@@ -168,10 +167,9 @@ class Trace(AthinaApiKey):
             self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
         request_dict = remove_none_values(self.to_dict())
         data = json.dumps(request_dict)
-        response = requests.post("https://8e714940905f4022b43267e348b8a713.api.mockbin.io/", headers= {'Content-Type': 'application/json'}, data=data)
-        # response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/inference', payload=data, headers={
-        #     'athina-api-key': Trace.get_api_key(),
-        # })
+        response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/trace/sdk', payload=data, headers={
+            'athina-api-key': Trace.get_api_key(),
+        })
         if response.status_code == 200:
             print("Trace and spans successfully saved.")
         else:
