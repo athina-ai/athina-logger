@@ -1,5 +1,7 @@
+import asyncio
 import json
 import datetime
+import threading
 from typing import Any, Dict, List, Optional, Union
 
 from .span import Generation, Span
@@ -158,6 +160,11 @@ class Trace(AthinaApiKey):
         if duration:
             self._trace.duration = duration
 
+    async def _log_trace_async(self, request_dict: Dict[str, Any]):
+        RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/trace/sdk', payload=request_dict, headers={
+            "athina-api-key": Trace.get_api_key(), "Content-Type": "application/json"
+        })
+
     def end(self, end_time: Optional[datetime.datetime] = datetime.datetime.utcnow()):
         try:
             for span in self._spans:
@@ -167,8 +174,6 @@ class Trace(AthinaApiKey):
             if self._trace.duration is None:
                 self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
             request_dict = remove_none_values(self.to_dict())
-            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/trace/sdk', payload=request_dict, headers={
-                "athina-api-key": Trace.get_api_key(), "Content-Type": "application/json"
-            })
+            threading.Thread(target=lambda: asyncio.run(self._log_trace_async(request_dict))).start()
         except Exception as e:
             print("Error ending trace: ", e)
