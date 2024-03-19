@@ -3,7 +3,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
-class TraceCreateModel(BaseModel):
+class TraceModel(BaseModel):
     name: str
     start_time: str = Field(default_factory=datetime.datetime.utcnow)
     end_time: Optional[str] = None
@@ -12,7 +12,7 @@ class TraceCreateModel(BaseModel):
     attributes: Optional[dict] = None
     version: Optional[str] = None
 
-class SpanCreateModel(BaseModel):
+class SpanModel(BaseModel):
     name: str
     start_time: str = Field(default_factory=datetime.datetime.utcnow)
     span_type: str = "span"

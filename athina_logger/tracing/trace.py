@@ -5,14 +5,14 @@ import threading
 from typing import Any, Dict, List, Optional, Union
 
 from .span import Generation, Span
-from .models import TraceCreateModel
+from .models import TraceModel
 from .util import remove_none_values
 from athina_logger.api_key import AthinaApiKey
 from athina_logger.constants import API_BASE_URL
 from athina_logger.request_helper import RequestHelper
 
 class Trace(AthinaApiKey):
-    _trace: TraceCreateModel
+    _trace: TraceModel
     _spans: list[Span]
 
     def __init__(
@@ -25,7 +25,7 @@ class Trace(AthinaApiKey):
         duration: Optional[int] = None,
         version: Optional[str] = None,
     ):        
-        self._trace = TraceCreateModel(
+        self._trace = TraceModel(
             name=name,
             start_time=(start_time or datetime.datetime.utcnow()).isoformat(),
             end_time=end_time.isoformat() if end_time else None,
@@ -39,7 +39,10 @@ class Trace(AthinaApiKey):
     def __repr__(self):
         return f"Trace(name={self._trace.name}, dict={remove_none_values(self.to_dict())},  spans={self._spans})"
 
-    def add_span(
+    def add_span(self, span: Span):
+        self._spans.append(span)
+
+    def create_span(
         self,
         name: str,
         start_time: Optional[datetime.datetime] = None,
@@ -67,7 +70,10 @@ class Trace(AthinaApiKey):
         self._spans.append(span)
         return span
 
-    def add_generation(
+    def add_generation(self, generation: Generation):
+        self._spans.append(generation)
+
+    def create_generation(
         self,
         name: str,
         start_time: Optional[datetime.datetime] = None,

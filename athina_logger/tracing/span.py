@@ -1,6 +1,6 @@
 import datetime
 from typing import Any, Dict, List, Optional, Union
-from .models import SpanCreateModel
+from .models import SpanModel
 from .util import remove_none_values
 
 class Span:
@@ -22,7 +22,7 @@ class Span:
             start_time = datetime.datetime.utcnow()
         else:
             start_time = start_time.utcnow()
-        self._span = SpanCreateModel(
+        self._span = SpanModel(
             name=name,
             span_type=span_type,
             start_time=start_time.isoformat(),
@@ -44,7 +44,10 @@ class Span:
         span_dict["children"] = [child.to_dict() for child in self._children]
         return span_dict
 
-    def add_span(
+    def add_span(self, span: "Span"):
+        self._children.append(span)
+
+    def create_span(
         self,
         name: str,
         start_time: Optional[datetime.datetime] = None,
@@ -72,7 +75,10 @@ class Span:
         self._children.append(span)
         return span
 
-    def add_generation(
+    def add_generation(self, generation: "Generation"):
+        self._children.append(generation)
+
+    def create_generation(
         self,
         name: str,
         start_time: Optional[datetime.datetime] = None,
