@@ -1,10 +1,9 @@
-import logging
-
+from langchain.globals import get_debug
 from athina_logger.api_key import AthinaApiKey
  
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
-from langchain.callbacks.base import BaseCallbackHandler as LangchainBaseCallbackHandler
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain.schema.agent import AgentAction, AgentFinish
 from langchain.schema.document import Document
 from langchain_core.outputs import (
@@ -23,9 +22,8 @@ from langchain_core.messages import (
 from athina_logger.tracing.trace import Trace
 
 class LangchainCallbackHandler(
-    LangchainBaseCallbackHandler, AthinaApiKey
+    BaseCallbackHandler, AthinaApiKey
 ):
-    log = logging.getLogger("athina")
     next_span_id: Optional[str] = None
 
     def __init__(
@@ -33,6 +31,7 @@ class LangchainCallbackHandler(
         trace_name: Optional[str] = None,
         version: Optional[str] = None,
     ) -> None: 
+        _debug("LangchainCallbackHandler.__init__")
         self.version = version
         self.trace_name = trace_name
         self.runs = {}
@@ -51,11 +50,11 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         """Run on new LLM token. Only available when streaming is enabled."""
-        self.log.debug(
+        _debug(
             f"on llm new token: run_id: {run_id} parent_run_id: {parent_run_id}"
         )
 
-    def get_athina_run_name(self, serialized: Dict[str, Any], **kwargs: Any) -> str:
+    def _get_athina_run_name(self, serialized: Dict[str, Any], **kwargs: Any) -> str:
         """
         Retrieves the 'run_name' for an entity prioritizing the 'name' key in 'kwargs' or falling
         back to the 'name' or 'id' in 'serialized'. Defaults to "<unknown>" if none are available.
@@ -69,7 +68,7 @@ class LangchainCallbackHandler(
         """
         # Check if 'name' is in kwargs and not None, otherwise use default fallback logic
         if "name" in kwargs and kwargs["name"] is not None:
-            return kwargs["name"]
+            return str(kwargs["name"])
 
         # Fallback to serialized 'name', 'id', or "<unknown>"
         return serialized.get("name", serialized.get("id", ["<unknown>"])[-1])
@@ -83,42 +82,28 @@ class LangchainCallbackHandler(
         parent_run_id: Optional[UUID] = None,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Any:
-        try:
-            self.log.debug(
-                f"on chain start: run_id: {run_id} parent_run_id: {parent_run_id}, name {serialized.get('name', serialized.get('id', ['<unknown>'])[-1])}"
-            )
-            self.__generate_trace_and_parent(
-                serialized=serialized,
-                inputs=inputs,
-                run_id=run_id,
-                parent_run_id=parent_run_id,
-                tags=tags,
-                metadata=metadata,
-                version=self.version,
-                **kwargs,
-            )
-
-            content = {
-                "id": self.next_span_id,
-                "trace_id": self.trace.id,
-                "name": self.get_athina_run_name(serialized, **kwargs),
-                "metadata": self.__join_tags_and_metadata(tags, metadata),
-                "input": inputs,
-                "version": self.version,
-            }
-
-            if parent_run_id is None:
-                if self.root_span is None:
-                    self.runs[run_id] = self.trace.add_span(name=content["name"], attributes=content, version=self.version)
-                else:
-                    self.runs[run_id] = self.root_span.add_span(name=content["name"], attributes=content, version=self.version)
-            if parent_run_id is not None:
-                self.runs[run_id] = self.runs[parent_run_id].add_span(name=content["name"], attributes=content, version=self.version)
-
-        except Exception as e:
-            self.log.exception(e)
+        **kwargs: Any) -> Any:
+        _debug(
+            f"on chain start: run_id: {run_id} parent_run_id: {parent_run_id}, name {serialized.get('name', serialized.get('id', ['<unknown>'])[-1])}"
+        )
+        self._generate_trace(
+            serialized=serialized,
+            inputs=inputs,
+            run_id=run_id,
+            parent_run_id=parent_run_id,
+            tags=tags,
+            metadata=metadata,
+            version=self.version,
+            **kwargs,
+        )
+        name = self._get_athina_run_name(serialized, **kwargs) 
+        if parent_run_id is None:
+            if self.root_span is None:
+                self.runs[run_id] = self.trace.add_span(name=name, input=inputs, version=self.version)
+            else:
+                self.runs[run_id] = self.root_span.add_span(name=name, input=inputs, version=self.version)
+        if parent_run_id is not None:
+            self.runs[run_id] = self.runs[parent_run_id].add_span(name=name, input=inputs, version=self.version) 
 
     def on_chain_end(
         self,
@@ -129,17 +114,16 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on chain end: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-
             if run_id not in self.runs:
                 raise Exception("run not found")
-            
-            self._update_trace(run_id, parent_run_id, outputs)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, outputs, None)
+            self.runs[run_id].end()
+            self.trace.end()
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_chain_error(
         self,
@@ -151,14 +135,14 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> None:
         try:
-            self.log.debug(
+            _debug(
                 f"on chain error: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-            self._update_trace(run_id, parent_run_id, None, error)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, None, error)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_agent_action(
         self,
@@ -170,19 +154,18 @@ class LangchainCallbackHandler(
     ) -> Any:
         """Run on agent action."""
         try:
-            self.log.debug(
+            _debug(
                 f"on agent action: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
 
             if run_id not in self.runs:
                 raise Exception("run not found")
 
-            self._update_trace(run_id, parent_run_id, action, None)
-
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, action, None)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_agent_finish(
         self,
@@ -193,17 +176,17 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on agent finish: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
             if run_id not in self.runs:
                 raise Exception("run not found")
 
-            self._update_trace(run_id, parent_run_id, finish, None)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, finish, None)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_chat_model_start(
         self,
@@ -217,10 +200,12 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on chat model start: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-
+            if metadata is None:
+                metadata = {}
+            metadata['is_chat_model'] = True
             self._on_llm_action(
                 serialized,
                 run_id,
@@ -233,7 +218,7 @@ class LangchainCallbackHandler(
                 **kwargs,
             )
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_retriever_start(
         self,
@@ -247,23 +232,22 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on retriever start: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
 
             if parent_run_id is None or parent_run_id not in self.runs:
                 raise Exception("parent run not found")
 
-            self.runs[run_id] = self.runs[parent_run_id].span(
-                id=self.next_span_id,
-                name=self.get_athina_run_name(serialized, **kwargs),
-                input=query,
-                metadata=self.__join_tags_and_metadata(tags, metadata),
+            self.runs[run_id] = self.runs[parent_run_id].add_span(
+                name=self._get_athina_run_name(serialized, **kwargs),
+                input={"query":query},
+                attributes=self._join_tags_and_metadata(tags, metadata),
                 version=self.version,
             )
             self.next_span_id = None
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_retriever_end(
         self,
@@ -274,18 +258,18 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on retriever end: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
 
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
 
-            self._update_trace(run_id, parent_run_id, documents, None)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, documents, None)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_retriever_error(
         self,
@@ -297,17 +281,17 @@ class LangchainCallbackHandler(
     ) -> Any:
         """Run when Retriever errors."""
         try:
-            self.log.debug(
+            _debug(
                 f"on retriever error: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
 
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
-            self._update_trace(run_id, parent_run_id, None, error)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, None, error)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_tool_start(
         self,
@@ -321,28 +305,20 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on tool start: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-
             if parent_run_id is None or parent_run_id not in self.runs:
                 raise Exception("parent run not found")
-            meta = self.__join_tags_and_metadata(tags, metadata)
-
-            meta.update(
-                {key: value for key, value in kwargs.items() if value is not None}
-            )
-
-            self.runs[run_id] = self.runs[parent_run_id].span(
-                id=self.next_span_id,
-                name=self.get_athina_run_name(serialized, **kwargs),
-                input=input_str,
-                metadata=meta,
+            self.runs[run_id] = self.runs[parent_run_id].add_span(
+                name=self._get_athina_run_name(serialized, **kwargs),
+                input={"input_str":input_str},
+                attributes=self._join_tags_and_metadata(tags, metadata),
                 version=self.version,
             )
             self.next_span_id = None
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_tool_end(
         self,
@@ -353,18 +329,16 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on tool end: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
-            self._update_trace(run_id, parent_run_id, output, None)
-            self.runs[run_id] = self.runs[run_id].end(
-                output=output, version=self.version
-            )
+            self._update_run(run_id, output, None)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_tool_error(
         self,
@@ -375,16 +349,16 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on tool error: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
-            self._update_trace(run_id, parent_run_id, None, error)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, None, error)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_llm_start(
         self,
@@ -398,9 +372,11 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            self.log.info(
                 f"on llm start: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
+            _debug("metadata:")
+            _debug(metadata)
             self._on_llm_action(
                 serialized,
                 run_id,
@@ -411,7 +387,7 @@ class LangchainCallbackHandler(
                 **kwargs,
             )
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_llm_end(
         self,
@@ -422,11 +398,11 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on llm end: run_id: {run_id} parent_run_id: {parent_run_id} response: {response} kwargs: {kwargs}"
             )
             if run_id not in self.runs:
-                raise Exception("Run not found, see docs what to do in this case.")
+                raise Exception("Run not found, something went wrong.")
             else:
                 generation = response.generations[-1][-1]
                 extracted_response = (
@@ -440,14 +416,11 @@ class LangchainCallbackHandler(
                     or not response.llm_output["token_usage"]
                     else response.llm_output["token_usage"]
                 )
-                # self._update_trace(run_id, parent_run_id, extracted_response, None)
-                self.runs[run_id] = self.runs[run_id].end()
-                # print("run_id", run_id)
-                # print("parent_run_id", parent_run_id)
-                # print(self.trace)
-                self.trace.end()
+                _debug(self.runs[run_id])
+                self.runs[run_id].update(prompt_tokens=llm_usage["prompt_tokens"], completion_tokens=llm_usage["completion_tokens"], total_tokens=llm_usage["total_tokens"], response=extracted_response)
+                self.runs[run_id].end()
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def on_llm_error(
         self,
@@ -458,14 +431,14 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.debug(
+            _debug(
                 f"on llm error: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-            self._update_trace(run_id, parent_run_id, None, error)
-            self.runs[run_id] = self.runs[run_id].end()
+            self._update_run(run_id, None, error)
+            self.runs[run_id].end()
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
     def _on_llm_action(
         self,
@@ -478,7 +451,7 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ):
         try:
-            self.__generate_trace_and_parent(
+            self._generate_trace(
                 serialized,
                 inputs=prompts[0] if len(prompts) == 1 else prompts,
                 run_id=run_id,
@@ -487,46 +460,41 @@ class LangchainCallbackHandler(
                 metadata=metadata,
                 version=self.version,
                 kwargs=kwargs,
-            )
-            model_name = kwargs.get('invocation_params').get('model_name')
-            content = {
-                "name": self.get_athina_run_name(serialized, **kwargs),
-                "input": prompts,
-                "metadata": self.__join_tags_and_metadata(tags, metadata),
-                "model": model_name,
-                "model_parameters": {
-                    key: value
-                    for key, value in {
-                        "temperature": kwargs["invocation_params"].get("temperature"),
-                        "max_tokens": kwargs["invocation_params"].get("max_tokens"),
-                        "top_p": kwargs["invocation_params"].get("top_p"),
-                        "frequency_penalty": kwargs["invocation_params"].get(
-                            "frequency_penalty"
-                        ),
-                        "presence_penalty": kwargs["invocation_params"].get(
-                            "presence_penalty"
-                        ),
-                        "request_timeout": kwargs["invocation_params"].get(
-                            "request_timeout"
-                        ),
-                    }.items()
-                    if value is not None
-                },
-                "version": self.version,
+            ) 
+            # Convert all items in prompts to strings, handling dictionaries specifically
+            prompts_str = []
+            for item in prompts:
+                if isinstance(item, dict):
+                    prompts_str.append(item.get('text', str(item)))
+                else:
+                    prompts_str.append(str(item))
+            name = self._get_athina_run_name(serialized, **kwargs)
+            attributes = { 
+                'is_chat_model' : metadata.get('is_chat_model', False),
+                'prompt_slug': metadata.get('prompt_slug', None),
+                'user_query': metadata.get('user_query', None),
+                'context': metadata.get('global_context', None),
+                'prompt': {'text': ' '.join(prompts_str)},
+                'session_id': metadata.get('session_id', None),
+                'customer_id': metadata.get('customer_id', None),
+                'customer_user_id': metadata.get('customer_user_id', None),
+                'external_reference_id': metadata.get('external_reference_id', None),
+                'custom_attributes': metadata.get('custom_attributes', None),
+                'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
-
+            prompt_slug = metadata.get('prompt_slug', None)
             if parent_run_id in self.runs:
-                self.runs[run_id] = self.runs[parent_run_id].add_generation(name=content["name"], attributes=content, version=self.version)
+                self.runs[run_id] = self.runs[parent_run_id].add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             elif self.root_span is not None and parent_run_id is None:
-                self.runs[run_id] = self.root_span.add_generation(name=content["name"], attributes=content, version=self.version)
+                self.runs[run_id] = self.root_span.add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             else:
-                self.runs[run_id] = self.trace.add_generation(name=content["name"], attributes=content, version=self.version)
+                self.runs[run_id] = self.trace.add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
 
-    def __generate_trace_and_parent(
+    def _generate_trace(
         self,
         serialized: Dict[str, Any],
         inputs: Union[Dict[str, Any], List[str], str, None],
@@ -538,40 +506,20 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ):
         try:
-            class_name = self.get_athina_run_name(serialized, **kwargs)
-
-            # on a new invocation, and not user provided root, we want to initialise a new trace
-            # parent_run_id is None when we are at the root of a langchain execution
-            if (
-                self.trace is not None
-                and parent_run_id is None
-            ):
-                self.trace = None
-                self.runs = {}
-
-            # if we are at a root, it means we do not have a root provided by a user.
-            # Initialise it by creating a trace and root span.
+            class_name = self._get_athina_run_name(serialized, **kwargs)
+            # Initialise trace by creating a trace if it does not exist
             if self.trace is None:
                 trace = Trace(
                     name=self.trace_name if self.trace_name is not None else class_name,
+                    attributes=metadata,
                     version=self.version,
                 )
-
-                self.trace = trace
-
-                if parent_run_id is not None and parent_run_id in self.runs:
-                    self.runs[run_id] = self.trace.add_span(
-                        name=class_name,
-                        input=inputs,
-                        version=self.version,
-                    )
-
-                return
+                self.trace = trace 
 
         except Exception as e:
-            self.log.exception(e)
+            _debug(e)
 
-    def __join_tags_and_metadata(
+    def _join_tags_and_metadata(
         self,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -586,13 +534,14 @@ class LangchainCallbackHandler(
         else:
             return metadata
  
-    def _update_trace(self, run_id: str, parent_run_id: Optional[str], output: any, error: Optional[Exception] = None):
-        """Update the trace with the output of the current run. Called at every finish callback event."""
-        if self.trace is not None:
+    def _update_run(self, run_id: str, output: any, error: Optional[Exception] = None):
+        """Update the trace/span with the output of the current run."""
+        if self.trace is not None and self.runs[run_id] is not None:
             if error is not None:
-                self.trace.update(status="ERROR",attributes={"status_message": str(error)}),
+                self.runs[run_id].update(status="ERROR",attributes={"status_message": str(error)})
             else:
-                self.trace.update(output=output)
+                _debug(self.runs[run_id])
+                self.runs[run_id].update(output=output)
 
     def _convert_message_to_dict(self, message: BaseMessage) -> Dict[str, Any]:
         # assistant message
@@ -634,6 +583,9 @@ def _extract_raw_esponse(last_response):
         else last_response.message.additional_kwargs
     )
 
-
 def _flatten_comprehension(matrix):
     return [item for row in matrix for item in row]
+
+def _debug(msg):
+    if get_debug():
+        print(msg)
