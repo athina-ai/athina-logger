@@ -99,11 +99,11 @@ class LangchainCallbackHandler(
         name = self._get_athina_run_name(serialized, **kwargs) 
         if parent_run_id is None:
             if self.root_span is None:
-                self.runs[run_id] = self.trace.add_span(name=name, input=inputs, version=self.version)
+                self.runs[run_id] = self.trace.create_span(name=name, input=inputs, version=self.version)
             else:
-                self.runs[run_id] = self.root_span.add_span(name=name, input=inputs, version=self.version)
+                self.runs[run_id] = self.root_span.create_span(name=name, input=inputs, version=self.version)
         if parent_run_id is not None:
-            self.runs[run_id] = self.runs[parent_run_id].add_span(name=name, input=inputs, version=self.version) 
+            self.runs[run_id] = self.runs[parent_run_id].create_span(name=name, input=inputs, version=self.version) 
 
     def on_chain_end(
         self,
@@ -239,7 +239,7 @@ class LangchainCallbackHandler(
             if parent_run_id is None or parent_run_id not in self.runs:
                 raise Exception("parent run not found")
 
-            self.runs[run_id] = self.runs[parent_run_id].add_span(
+            self.runs[run_id] = self.runs[parent_run_id].create_span(
                 name=self._get_athina_run_name(serialized, **kwargs),
                 input={"query":query},
                 attributes=self._join_tags_and_metadata(tags, metadata),
@@ -310,7 +310,7 @@ class LangchainCallbackHandler(
             )
             if parent_run_id is None or parent_run_id not in self.runs:
                 raise Exception("parent run not found")
-            self.runs[run_id] = self.runs[parent_run_id].add_span(
+            self.runs[run_id] = self.runs[parent_run_id].create_span(
                 name=self._get_athina_run_name(serialized, **kwargs),
                 input={"input_str":input_str},
                 attributes=self._join_tags_and_metadata(tags, metadata),
@@ -484,11 +484,11 @@ class LangchainCallbackHandler(
             }
             prompt_slug = metadata.get('prompt_slug', None)
             if parent_run_id in self.runs:
-                self.runs[run_id] = self.runs[parent_run_id].add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
+                self.runs[run_id] = self.runs[parent_run_id].create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             elif self.root_span is not None and parent_run_id is None:
-                self.runs[run_id] = self.root_span.add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
+                self.runs[run_id] = self.root_span.create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             else:
-                self.runs[run_id] = self.trace.add_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
+                self.runs[run_id] = self.trace.create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
 
         except Exception as e:
             _debug(e)
