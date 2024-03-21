@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
 from uuid import UUID
+from .util.extract_model import _extract_model_name
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import (
@@ -95,6 +96,8 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
             for message in messages:
                 message_dicts = self._create_message_dicts(message)
 
+            language_model_id = _extract_model_name(serialized, **kwargs)
+
             self.runs[run_id] = {
                 'is_chat_model': True,
                 'prompt_slug': self.prompt_slug,
@@ -107,7 +110,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'external_reference_id': self.external_reference_id,
                 'custom_attributes': self.custom_attributes,
                 'llm_start_time': datetime.now(timezone.utc),
-                'language_model_id': kwargs.get('invocation_params').get('model_name')
+                'language_model_id': language_model_id
             }
         except Exception as e:
             exception_message = (
@@ -141,6 +144,8 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         **kwargs: Any,
     ) -> Any:
         try:
+            language_model_id = _extract_model_name(serialized, **kwargs)
+
             self.runs[run_id] = {
                 'is_chat_model': False,
                 'prompt_slug': self.prompt_slug,
@@ -153,7 +158,7 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
                 'external_reference_id': self.external_reference_id,
                 'custom_attributes': self.custom_attributes,
                 'llm_start_time': datetime.now(timezone.utc),
-                'language_model_id': kwargs.get('invocation_params').get('model_name')
+                'language_model_id': language_model_id
             }
         except Exception as e:
             exception_message = (
