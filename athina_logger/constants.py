@@ -1,5 +1,7 @@
 # Athina Server Base Url
 API_BASE_URL = 'https://log.athina.ai'
+# API_BASE_URL = 'https://api.staging.athina.ai'
+# API_BASE_URL = 'http://localhost:9000'
 LOG_INFERENCE_URL = f'{API_BASE_URL}/api/v1/log/inference'
 
 OPENAI_MODEL_ENCODINGS = {
