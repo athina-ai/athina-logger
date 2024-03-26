@@ -157,6 +157,7 @@ class Span:
         input: Optional[Dict[str, Any]] = None,
         output: Optional[Dict[str, Any]] = None,
         duration: Optional[int] = None,
+        attributes: Optional[Dict[str, Any]] = None,
     ):
         if end_time:
             self._span.end_time = end_time.utcnow()
@@ -168,6 +169,8 @@ class Span:
             self._span.output = output
         if duration:
             self._span.duration = duration
+        if attributes:
+            self._span.attributes.update(attributes)
 
     def end(self, end_time: Optional[datetime.datetime] = None):
         end_time = end_time or datetime.datetime.utcnow()
@@ -216,7 +219,7 @@ class Generation(Span):
     ):
         if attributes is None:
             attributes = {}
-        attributes = {**attributes, **{
+        additional_attributes = {
             "prompt": prompt,
             "response": response,
             "prompt_slug": prompt_slug,
@@ -239,7 +242,11 @@ class Generation(Span):
             "expected_response": expected_response,
             "custom_attributes": custom_attributes,
             "cost": cost,
-        }}
+        }
+        # Update 'attributes' only with non-None values from 'additional_attributes'
+        for key, value in additional_attributes.items():
+            if value is not None:
+                attributes[key] = value
         super().__init__(
             name=name,
             start_time=start_time,
@@ -309,11 +316,11 @@ class Generation(Span):
             "custom_attributes": custom_attributes if custom_attributes is not None else self._span.attributes.get("custom_attributes"),
             "cost": cost if cost is not None else self._span.attributes.get("cost"),
         }
-        self._span.attributes.update(attributes)
         super().update(
             end_time=end_time,
             status=status,
             input=input,
             output=output,
             duration=duration,
+            attributes=attributes,
         )
