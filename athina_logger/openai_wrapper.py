@@ -4,13 +4,13 @@ import datetime
 import functools
 import traceback
 import threading
-from typing import Callable, Optional, List
+from typing import Any, Callable, Dict, Optional, List
 import time
 from .athina_meta import AthinaMeta
 from .inference_logger import InferenceLogger
 from .api_key import AthinaApiKey
 import openai
-
+from .util.token_count_helper import get_prompt_tokens_openai_chat_completion, get_completion_tokens_openai_chat_completion
 
 # Check OpenAI version
 openai_version = openai.__version__
@@ -66,6 +66,7 @@ class OpenAiMiddleware:
     _athina_meta: Optional[AthinaMeta]
     _args: Optional[any]
     _kwargs: Optional[dict]
+    athina_response = ''
 
     def __init__(self):
         pass
@@ -101,26 +102,124 @@ class OpenAiMiddleware:
                         environment="default",
                     )
 
-                # Log to Athina if it is not a streamed response
-                if "stream" not in self._kwargs or not self._kwargs["stream"]:
-                    api_thread = threading.Thread(
-                        target=log_to_athina,
-                        kwargs={
-                            "result": openai_response if version_numbers < (1, 0, 0) else openai_response.model_dump(),
-                            "args": self._kwargs,
-                            "athina_meta": self._athina_meta,
-                        },
-                    )
-                    api_thread.start()
-
-                return openai_response
-
+                return self._response_interceptor(openai_response, ("stream" in self._kwargs and self._kwargs["stream"]))
             except Exception as e:
                 print("Exception in Athina logging: ", e)
                 traceback.print_exc()
                 return openai_response
 
         return wrapper
+
+    def _response_interceptor(self, response, is_streaming=False,
+                            send_response: Callable[[dict], None] = None):
+        def generator_intercept_packets():
+            for r in response:
+                self.collect_stream_inference_by_chunk(r)
+                yield r
+            self._log_stream_to_athina()
+
+        if is_streaming:
+            return generator_intercept_packets()
+        else:
+            api_thread = threading.Thread(
+                target=log_to_athina,
+                kwargs={
+                    "result": response if version_numbers < (1, 0, 0) else response.model_dump(),
+                    "args": self._kwargs,
+                    "athina_meta": self._athina_meta,
+                },
+            )
+            api_thread.start()
+            return response
+
+    def _get_text_from_stream_chunk(self, stream_chunk):
+        """
+        gets the text from the stream chunk
+        """
+        try:
+            text = ''
+            choices = stream_chunk.get('choices', []) 
+            if choices and len(choices) > 0 and 'delta' in choices[0]:
+                delta = choices[0].get('delta', {})
+                if 'content' in delta and delta['content'] is not None:
+                    text = delta.get('content', '')
+
+            return text
+        except Exception as e:
+            raise e
+
+    def collect_stream_inference_by_chunk(self, stream_chunk):
+        """
+        collects the inference from the log stream of openai chat completion chunk by chunk
+        """
+        try:
+            if isinstance(stream_chunk, dict):
+                self.athina_response += self._get_text_from_stream_chunk(
+                    stream_chunk)
+            else:
+                self.athina_response += self._get_text_from_stream_chunk(
+                    stream_chunk.model_dump())
+        except Exception as e:
+            raise e
+
+    def _log_stream_to_athina(self):
+        """
+        logs the stream response to the athina
+        """
+        try:
+            prompt_tokens = self._get_prompt_tokens(
+                prompt=self._kwargs["messages"], language_model_id=self._kwargs["model"])
+            completion_tokens = self._get_completion_tokens(
+                response=self.athina_response, language_model_id=self._kwargs["model"])
+            if prompt_tokens is not None and completion_tokens is not None:
+                total_tokens = prompt_tokens + completion_tokens
+            else:
+                total_tokens = None 
+            payload = {
+                'prompt_slug': self._athina_meta.prompt_slug,
+                'prompt': self._kwargs["messages"],
+                'language_model_id': self._kwargs["model"],
+                'response': self.athina_response,
+                'response_time': self._athina_meta.response_time,
+                'context': self._athina_meta.context,
+                'environment': self._athina_meta.environment,
+                'customer_id': str(self._athina_meta.customer_id) if self._athina_meta.customer_id is not None else None,
+                'customer_user_id': str(self._athina_meta.customer_user_id) if self._athina_meta.customer_user_id is not None else None,
+                'session_id': str(self._athina_meta.session_id) if self._athina_meta.session_id is not None else None,
+                'user_query': str(self._athina_meta.user_query) if self._athina_meta.user_query is not None else None,
+                'external_reference_id': str(self._athina_meta.external_reference_id) if self._athina_meta.external_reference_id is not None else None,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
+                'custom_attributes': self._athina_meta.custom_attributes,
+            }
+            # Remove None fields from the payload
+            payload = {k: v for k, v in payload.items() if v is not None}
+            InferenceLogger.log_inference(**payload)
+        except Exception as e:
+            raise e
+
+    def _get_prompt_tokens(self, prompt: List[Dict[str, Any]], language_model_id: str):
+        """
+        gets the prompt tokens given the prompt for the openai chat model completion
+        """
+        try:
+            tokens = get_prompt_tokens_openai_chat_completion(
+                prompt=prompt, language_model_id=language_model_id)
+            return tokens
+        except Exception as e:
+            return None
+
+    def _get_completion_tokens(self, response: str, language_model_id: str):
+        """
+        gets the completion tokens given the prompt response from the openai chat model completion
+        """
+        try:
+            tokens = get_completion_tokens_openai_chat_completion(
+                response=response, language_model_id=language_model_id)
+            return tokens
+        except Exception as e:
+            return None
 
     # Apply the Athina logging wrapper to OpenAI methods
     def apply_athina(self, openai_instance=None):
