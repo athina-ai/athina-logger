@@ -195,6 +195,7 @@ class OpenAiMiddleware:
                 'completion_tokens': completion_tokens,
                 'total_tokens': total_tokens,
                 'custom_attributes': self._athina_meta.custom_attributes,
+                'custom_eval_metrics': self._athina_meta.custom_eval_metrics,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
