@@ -31,17 +31,18 @@ class InferenceLogger(AthinaApiKey):
         context: Optional[Dict] = None,
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
+        custom_eval_metrics: Optional[Dict] = None,
         cost: Optional[float] = None,
     ) -> None:
         try:
-            args = (prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost)
+            args = (prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics)
             threading.Thread(target=lambda: asyncio.run(InferenceLogger._log_inference_asynchronously(*args))).start()
         except Exception as e:
             print("Error in logging inference to Athina: ", str(e))
 
     @staticmethod
     async def _log_inference_asynchronously(
-        prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost
+        prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics
     ) -> None:
         """
         logs the llm inference to athina
@@ -69,6 +70,7 @@ class InferenceLogger(AthinaApiKey):
                 'total_tokens': total_tokens,
                 'expected_response': expected_response,
                 'custom_attributes': custom_attributes,
+                'custom_eval_metrics': custom_eval_metrics,
                 'cost': cost,
             }
             # Remove None fields from the payload

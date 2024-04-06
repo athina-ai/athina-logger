@@ -29,6 +29,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
         environment = "production"
         external_reference_id = None
         custom_attributes = None
+        custom_eval_metrics = None
 
         if athina_meta:
             prompt_slug = athina_meta.prompt_slug
@@ -41,6 +42,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             environment = athina_meta.environment or "production"
             external_reference_id = athina_meta.external_reference_id
             custom_attributes = athina_meta.custom_attributes
+            custom_eval_metrics = athina_meta.custom_eval_metrics
 
         InferenceLogger.log_inference(
             prompt_slug=prompt_slug,
@@ -56,6 +58,7 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             environment=environment,
             external_reference_id=external_reference_id,
             custom_attributes=custom_attributes,
+            custom_eval_metrics=custom_eval_metrics,
         )
     except Exception as e:
         print("Exception while logging to Athina: ", e)
@@ -192,6 +195,7 @@ class OpenAiMiddleware:
                 'completion_tokens': completion_tokens,
                 'total_tokens': total_tokens,
                 'custom_attributes': self._athina_meta.custom_attributes,
+                'custom_eval_metrics': self._athina_meta.custom_eval_metrics,
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}

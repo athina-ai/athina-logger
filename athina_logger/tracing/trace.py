@@ -107,6 +107,7 @@ class Trace(AthinaApiKey):
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
         cost: Optional[float] = None,
+        custom_eval_metrics: Optional[Dict] = None,
     ) -> Generation:
         span = Generation(
             name=name,
@@ -141,6 +142,7 @@ class Trace(AthinaApiKey):
             expected_response=expected_response,
             custom_attributes=custom_attributes,
             cost=cost,
+            custom_eval_metrics=custom_eval_metrics,
         )
         self._spans.append(span)
         return span

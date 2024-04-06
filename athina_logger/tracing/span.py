@@ -112,6 +112,7 @@ class Span:
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
         cost: Optional[float] = None,
+        custom_eval_metrics: Optional[Dict] = None,
     ):
         span = Generation(
             name=name,
@@ -146,6 +147,7 @@ class Span:
             expected_response=expected_response,
             custom_attributes=custom_attributes,
             cost=cost,
+            custom_eval_metrics=custom_eval_metrics,
         )
         self._children.append(span)
         return span
@@ -216,6 +218,7 @@ class Generation(Span):
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
         cost: Optional[float] = None,
+        custom_eval_metrics: Optional[Dict] = None,
     ):
         if attributes is None:
             attributes = {}
@@ -242,6 +245,7 @@ class Generation(Span):
             "expected_response": expected_response,
             "custom_attributes": custom_attributes,
             "cost": cost,
+            "custom_eval_metrics": custom_eval_metrics,
         }
         # Update 'attributes' only with non-None values from 'additional_attributes'
         for key, value in additional_attributes.items():
@@ -289,6 +293,7 @@ class Generation(Span):
         expected_response: Optional[str] = None,
         custom_attributes: Optional[Dict] = None,
         cost: Optional[float] = None,
+        custom_eval_metrics: Optional[Dict] = None,
     ):
         if self._span.attributes is None:
             self._span.attributes = {}
@@ -315,6 +320,7 @@ class Generation(Span):
             "expected_response": expected_response if expected_response is not None else self._span.attributes.get("expected_response"),
             "custom_attributes": custom_attributes if custom_attributes is not None else self._span.attributes.get("custom_attributes"),
             "cost": cost if cost is not None else self._span.attributes.get("cost"),
+            "custom_eval_metrics": custom_eval_metrics if custom_eval_metrics is not None else self._span.attributes.get("custom_eval_metrics"),
         }
         super().update(
             end_time=end_time,
