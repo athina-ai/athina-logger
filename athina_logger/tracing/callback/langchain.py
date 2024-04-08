@@ -20,6 +20,8 @@ from langchain_core.messages import (
     FunctionMessage,
 )
 from athina_logger.tracing.trace import Trace
+from athina_logger.tracing.span import Span
+from athina_logger.util.extract_model import _extract_model_name
 
 class LangchainCallbackHandler(
     BaseCallbackHandler, AthinaApiKey
@@ -34,9 +36,9 @@ class LangchainCallbackHandler(
         _debug("LangchainCallbackHandler.__init__")
         self.version = version
         self.trace_name = trace_name
+        self.trace_run_id = None
         self.runs = {}
-        self.trace = None 
-        self.root_span = None
+        self.trace: Trace = None 
 
     def setNextSpan(self, id: str):
         self.next_span_id = id
@@ -98,10 +100,8 @@ class LangchainCallbackHandler(
         )
         name = self._get_athina_run_name(serialized, **kwargs) 
         if parent_run_id is None:
-            if self.root_span is None:
-                self.runs[run_id] = self.trace.create_span(name=name, input=inputs, version=self.version)
-            else:
-                self.runs[run_id] = self.root_span.create_span(name=name, input=inputs, version=self.version)
+            self.runs[run_id] = self.trace.create_span(name=name, input=inputs, version=self.version)
+
         if parent_run_id is not None:
             self.runs[run_id] = self.runs[parent_run_id].create_span(name=name, input=inputs, version=self.version) 
 
@@ -121,7 +121,8 @@ class LangchainCallbackHandler(
                 raise Exception("run not found")
             self._update_run(run_id, outputs, None)
             self.runs[run_id].end()
-            self.trace.end()
+            if self.trace_run_id == run_id:
+                self.trace.end()
         except Exception as e:
             _debug(e)
 
@@ -372,7 +373,7 @@ class LangchainCallbackHandler(
         **kwargs: Any,
     ) -> Any:
         try:
-            self.log.info(
+            _debug(
                 f"on llm start: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
             _debug("metadata:")
@@ -410,6 +411,9 @@ class LangchainCallbackHandler(
                     if isinstance(generation, ChatGeneration)
                     else _extract_raw_esponse(generation)
                 )
+                if isinstance(extracted_response, Dict):
+                    extracted_response = extracted_response.get('content', None)
+
                 llm_usage = (
                     None
                     if response.llm_output is None
@@ -444,7 +448,7 @@ class LangchainCallbackHandler(
         self,
         serialized: Dict[str, Any],
         run_id: UUID,
-        prompts: List[str],
+        prompts: List[Any],
         parent_run_id: Optional[UUID] = None,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -461,32 +465,23 @@ class LangchainCallbackHandler(
                 version=self.version,
                 kwargs=kwargs,
             ) 
-            # Convert all items in prompts to strings, handling dictionaries specifically
-            prompts_str = []
-            for item in prompts:
-                if isinstance(item, dict):
-                    prompts_str.append(item.get('text', str(item)))
-                else:
-                    prompts_str.append(str(item))
             name = self._get_athina_run_name(serialized, **kwargs)
             attributes = { 
                 'is_chat_model' : metadata.get('is_chat_model', False),
                 'prompt_slug': metadata.get('prompt_slug', None),
                 'user_query': metadata.get('user_query', None),
                 'context': metadata.get('global_context', None),
-                'prompt': {'text': ' '.join(prompts_str)},
+                'prompt': prompts,
                 'session_id': metadata.get('session_id', None),
                 'customer_id': metadata.get('customer_id', None),
                 'customer_user_id': metadata.get('customer_user_id', None),
                 'external_reference_id': metadata.get('external_reference_id', None),
                 'custom_attributes': metadata.get('custom_attributes', None),
-                'language_model_id': kwargs.get('invocation_params').get('model_name')
+                'language_model_id': _extract_model_name(serialized, **kwargs)
             }
             prompt_slug = metadata.get('prompt_slug', None)
             if parent_run_id in self.runs:
                 self.runs[run_id] = self.runs[parent_run_id].create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
-            elif self.root_span is not None and parent_run_id is None:
-                self.runs[run_id] = self.root_span.create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             else:
                 self.runs[run_id] = self.trace.create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
 
@@ -515,7 +510,7 @@ class LangchainCallbackHandler(
                     version=self.version,
                 )
                 self.trace = trace 
-
+                self.trace_run_id = run_id
         except Exception as e:
             _debug(e)
 
