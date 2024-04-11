@@ -20,7 +20,6 @@ from langchain_core.messages import (
     FunctionMessage,
 )
 from athina_logger.tracing.trace import Trace
-from athina_logger.tracing.span import Span
 from athina_logger.util.extract_model import _extract_model_name
 
 class LangchainCallbackHandler(
