@@ -173,8 +173,9 @@ class Trace(AthinaApiKey):
             "athina-api-key": Trace.get_api_key(), "Content-Type": "application/json"
         })
 
-    def end(self, end_time: Optional[datetime.datetime] = datetime.datetime.utcnow()):
+    def end(self, end_time: Optional[datetime.datetime] = None):
         try:
+            end_time = end_time or datetime.datetime.utcnow()
             for span in self._spans:
                 span.end(end_time)
             if self._trace.end_time is None:
