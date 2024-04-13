@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from .span import Generation, Span
 from .models import TraceModel
-from .util import remove_none_values
+from .util import get_utc_end_time, remove_none_values
 from athina_logger.api_key import AthinaApiKey
 from athina_logger.constants import API_BASE_URL
 from athina_logger.request_helper import RequestHelper
@@ -174,12 +174,12 @@ class Trace(AthinaApiKey):
         })
 
     def end(self, end_time: Optional[datetime.datetime] = None):
-        try:
-            end_time = end_time or datetime.datetime.utcnow()
+        try:      
+            end_time = get_utc_end_time(end_time)
             for span in self._spans:
                 span.end(end_time)
             if self._trace.end_time is None:
-                self._trace.end_time = end_time.utcnow().isoformat()
+                self._trace.end_time = end_time.isoformat()
             if self._trace.duration is None:
                 self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
             request_dict = remove_none_values(self.to_dict())
