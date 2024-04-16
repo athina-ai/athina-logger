@@ -1,7 +1,7 @@
 import datetime
 from typing import Any, Dict, List, Optional, Union
 from .models import SpanModel
-from .util import remove_none_values
+from .util import get_utc_end_time, remove_none_values
 
 class Span:
 
@@ -175,7 +175,7 @@ class Span:
             self._span.attributes.update(attributes)
 
     def end(self, end_time: Optional[datetime.datetime] = None):
-        end_time = end_time or datetime.datetime.utcnow()
+        end_time = get_utc_end_time(end_time)
         if self._span.end_time is None:
             self._span.end_time = end_time.isoformat()
         if self._span.duration is None:
