@@ -67,15 +67,13 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         **kwargs: Any,
     ) -> Any:
         try:
-            if run_id is None or run_id not in self.runs:
-                return
-            run_info = self.runs[run_id]
             retrieved_documents_data = ''
             for document in documents:
                 page_content = document.page_content
                 retrieved_documents_data += page_content + '\n'
+            if self.global_context is None:
+                self.global_context = {}
             self.global_context['documents'] = retrieved_documents_data
-            run_info['retrieved_documents'] = self.global_context
         except Exception as e:
             exception_message = (
                 f"Error:\n"
