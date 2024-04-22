@@ -6,10 +6,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from .span import Generation, Span
 from .models import TraceModel
-from .util import get_utc_end_time, remove_none_values
+from .util import get_utc_time, remove_none_values
 from athina_logger.api_key import AthinaApiKey
 from athina_logger.constants import API_BASE_URL
 from athina_logger.request_helper import RequestHelper
+from langchain.schema.document import Document
 
 class Trace(AthinaApiKey):
     _trace: TraceModel
@@ -27,7 +28,7 @@ class Trace(AthinaApiKey):
     ):        
         self._trace = TraceModel(
             name=name,
-            start_time=(start_time or datetime.datetime.utcnow()).isoformat(),
+            start_time=(start_time or datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)).isoformat(),
             end_time=end_time.isoformat() if end_time else None,
             status=status,
             attributes=attributes or {},
@@ -57,7 +58,7 @@ class Trace(AthinaApiKey):
     )-> Span:
         span = Span(
             name=name,
-            start_time=(start_time or datetime.datetime.utcnow()),
+            start_time=(start_time or datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)),
             end_time=end_time,
             span_type=span_type,
             status=status,
@@ -111,7 +112,7 @@ class Trace(AthinaApiKey):
     ) -> Generation:
         span = Generation(
             name=name,
-            start_time=(start_time or datetime.datetime.utcnow()),
+            start_time=(start_time or datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)),
             end_time=end_time,
             span_type=span_type,
             status=status,
@@ -160,7 +161,7 @@ class Trace(AthinaApiKey):
         attributes: Optional[Dict[str, Any]] = None,
     ):
         if end_time:
-            self._trace.end_time = end_time.utcnow().isoformat()
+            self._trace.end_time = end_time.replace(tzinfo=datetime.timezone.utc).isoformat()
         if status:
             self._trace.status = status
         if attributes:
@@ -175,13 +176,14 @@ class Trace(AthinaApiKey):
 
     def end(self, end_time: Optional[datetime.datetime] = None):
         try:      
-            end_time = get_utc_end_time(end_time)
+            end_time = get_utc_time(end_time)
             for span in self._spans:
                 span.end(end_time)
             if self._trace.end_time is None:
-                self._trace.end_time = end_time.isoformat()
+                self._trace.end_time =  end_time.replace(tzinfo=datetime.timezone.utc).isoformat()
             if self._trace.duration is None:
-                self._trace.duration = int((end_time - datetime.datetime.fromisoformat(self._trace.start_time)).total_seconds())
+                delta = (end_time - get_utc_time(datetime.datetime.fromisoformat(self._trace.start_time)))
+                self._trace.duration = int((delta.seconds * 1000) + (delta.microseconds // 1000))
             request_dict = remove_none_values(self.to_dict())
             threading.Thread(target=lambda: asyncio.run(self._log_trace_async(request_dict))).start()
         except Exception as e:

@@ -4,7 +4,9 @@ from athina_logger.api_key import AthinaApiKey
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain.schema.agent import AgentAction, AgentFinish
+from langchain_core.messages.ai import AIMessageChunk
+from langchain_core.prompt_values import ChatPromptValue
+from langchain.schema.agent import AgentAction, AgentActionMessageLog, AgentFinish
 from langchain.schema.document import Document
 from langchain_core.outputs import (
     ChatGeneration,
@@ -25,8 +27,6 @@ from athina_logger.util.extract_model import _extract_model_name
 class LangchainCallbackHandler(
     BaseCallbackHandler, AthinaApiKey
 ):
-    next_span_id: Optional[str] = None
-
     def __init__(
         self,
         trace_name: Optional[str] = None,
@@ -38,9 +38,6 @@ class LangchainCallbackHandler(
         self.trace_run_id = None
         self.runs = {}
         self.trace: Trace = None 
-
-    def setNextSpan(self, id: str):
-        self.next_span_id = id
 
     def on_llm_new_token(
         self,
@@ -98,11 +95,59 @@ class LangchainCallbackHandler(
             **kwargs,
         )
         name = self._get_athina_run_name(serialized, **kwargs) 
+        if "intermediate_steps" in inputs:
+            inputs["intermediate_steps"] = [
+                { 
+                    "tool_input":agent_action_message.tool_input,
+                    "log":agent_action_message.log
+                } for agent_action_message in inputs["intermediate_steps"]
+            ]
         if parent_run_id is None:
             self.runs[run_id] = self.trace.create_span(name=name, input=inputs, version=self.version)
 
         if parent_run_id is not None:
             self.runs[run_id] = self.runs[parent_run_id].create_span(name=name, input=inputs, version=self.version) 
+
+    def convert_outputs_to_dict(self, outputs: Dict[str, Any]) -> Dict:
+        if "intermediate_steps" in outputs:
+            outputs["intermediate_steps"] = [
+                { 
+                    "tool_input":agent_action_message.tool_input,
+                    "log":agent_action_message.log
+                } for agent_action_message in outputs["intermediate_steps"]
+            ]
+        if type(outputs) == AgentActionMessageLog:
+            outputs = { 
+                "tool_input": outputs.tool_input,
+                "log": outputs.log
+            }
+        if type(outputs) == ChatPromptValue:
+            outputs = { 
+                "messages": outputs.to_string(),
+            }
+        if type(outputs) == AgentFinish:
+            outputs = { 
+                "return_values": outputs.return_values,
+            }
+        if type(outputs) == FunctionMessage:
+            outputs = {
+                "content": outputs.content
+            }
+        if type(outputs) == list and all(isinstance(item, AIMessageChunk) for item in outputs):
+            outputs = [
+                { 
+                    "type":ai_message_chunk.type
+                } for ai_message_chunk in outputs
+            ]
+        if "agent_scratchpad" in outputs:
+            outputs["agent_scratchpad"] = [
+                { 
+                    "type":ai_message_chunk.type
+                } for ai_message_chunk in outputs["agent_scratchpad"]
+            ]
+        if outputs is None or type(outputs) is not dict:
+            outputs = {}
+        return outputs
 
     def on_chain_end(
         self,
@@ -118,6 +163,7 @@ class LangchainCallbackHandler(
             )
             if run_id not in self.runs:
                 raise Exception("run not found")
+            outputs = self.convert_outputs_to_dict(outputs)
             self._update_run(run_id, outputs, None)
             self.runs[run_id].end()
             if self.trace_run_id == run_id:
@@ -161,7 +207,7 @@ class LangchainCallbackHandler(
             if run_id not in self.runs:
                 raise Exception("run not found")
 
-            self._update_run(run_id, action, None)
+            self._update_run(run_id, {"agent_action" : action.tool_input}, None)
             self.runs[run_id].end()
 
         except Exception as e:
@@ -182,7 +228,7 @@ class LangchainCallbackHandler(
             if run_id not in self.runs:
                 raise Exception("run not found")
 
-            self._update_run(run_id, finish, None)
+            self._update_run(run_id, {"agent_finish": finish.return_values}, None)
             self.runs[run_id].end()
 
         except Exception as e:
@@ -245,7 +291,7 @@ class LangchainCallbackHandler(
                 attributes=self._join_tags_and_metadata(tags, metadata),
                 version=self.version,
             )
-            self.next_span_id = None
+
         except Exception as e:
             _debug(e)
 
@@ -261,13 +307,11 @@ class LangchainCallbackHandler(
             _debug(
                 f"on retriever end: run_id: {run_id} parent_run_id: {parent_run_id}"
             )
-
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
-
-            self._update_run(run_id, documents, None)
+            documents_json = {"documents" : [doc.page_content for doc in documents]}
+            self._update_run(run_id, documents_json, None)
             self.runs[run_id].end()
-
         except Exception as e:
             _debug(e)
 
@@ -312,11 +356,10 @@ class LangchainCallbackHandler(
                 raise Exception("parent run not found")
             self.runs[run_id] = self.runs[parent_run_id].create_span(
                 name=self._get_athina_run_name(serialized, **kwargs),
-                input={"input_str":input_str},
+                input={"input_str": input_str},
                 attributes=self._join_tags_and_metadata(tags, metadata),
                 version=self.version,
             )
-            self.next_span_id = None
         except Exception as e:
             _debug(e)
 
@@ -334,7 +377,7 @@ class LangchainCallbackHandler(
             )
             if run_id is None or run_id not in self.runs:
                 raise Exception("run not found")
-            self._update_run(run_id, output, None)
+            self._update_run(run_id, {"tool_output" : output}, None)
             self.runs[run_id].end()
 
         except Exception as e:
@@ -408,7 +451,7 @@ class LangchainCallbackHandler(
                 extracted_response = (
                     self._convert_message_to_dict(generation.message)
                     if isinstance(generation, ChatGeneration)
-                    else _extract_raw_esponse(generation)
+                    else _extract_raw_response(generation)
                 )
                 if isinstance(extracted_response, Dict):
                     extracted_response = extracted_response.get('content', None)
@@ -419,10 +462,16 @@ class LangchainCallbackHandler(
                     or not response.llm_output["token_usage"]
                     else response.llm_output["token_usage"]
                 )
-                _debug(self.runs[run_id])
-                self.runs[run_id].update(prompt_tokens=llm_usage["prompt_tokens"], completion_tokens=llm_usage["completion_tokens"], total_tokens=llm_usage["total_tokens"], response=extracted_response)
+                self.runs[run_id].update(
+                    prompt_tokens=llm_usage["prompt_tokens"] if llm_usage else None, 
+                    completion_tokens=llm_usage["completion_tokens"] if llm_usage else None,
+                    total_tokens=llm_usage["total_tokens"] if llm_usage else None, 
+                    response=extracted_response
+                )
                 self.runs[run_id].end()
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             _debug(e)
 
     def on_llm_error(
@@ -479,6 +528,7 @@ class LangchainCallbackHandler(
                 'language_model_id': _extract_model_name(serialized, **kwargs)
             }
             prompt_slug = metadata.get('prompt_slug', None)
+            _debug(f"Creating generation with name: {name} and attributes: {attributes}")
             if parent_run_id in self.runs:
                 self.runs[run_id] = self.runs[parent_run_id].create_generation(name=name, attributes=attributes, version=self.version, prompt_slug=prompt_slug)
             else:
@@ -528,13 +578,12 @@ class LangchainCallbackHandler(
         else:
             return metadata
  
-    def _update_run(self, run_id: str, output: any, error: Optional[Exception] = None):
+    def _update_run(self, run_id: str, output: Dict, error: Optional[Exception] = None):
         """Update the trace/span with the output of the current run."""
         if self.trace is not None and self.runs[run_id] is not None:
             if error is not None:
                 self.runs[run_id].update(status="ERROR",attributes={"status_message": str(error)})
             else:
-                _debug(self.runs[run_id])
                 self.runs[run_id].update(output=output)
 
     def _convert_message_to_dict(self, message: BaseMessage) -> Dict[str, Any]:
@@ -567,7 +616,7 @@ class LangchainCallbackHandler(
         return [self._convert_message_to_dict(m) for m in messages]
 
 
-def _extract_raw_esponse(last_response):
+def _extract_raw_response(last_response):
     """Extract the response from the last response of the LLM call."""
     # We return the text of the response if not empty, otherwise the additional_kwargs
     # Additional kwargs contains the response in case of tool usage

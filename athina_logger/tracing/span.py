@@ -1,7 +1,8 @@
 import datetime
 from typing import Any, Dict, List, Optional, Union
 from .models import SpanModel
-from .util import get_utc_end_time, remove_none_values
+from .util import get_utc_time, remove_none_values
+from langchain.schema.document import Document
 
 class Span:
 
@@ -19,9 +20,9 @@ class Span:
         version: Optional[str] = None,
     ):
         if start_time is None:
-            start_time = datetime.datetime.utcnow()
+            start_time = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
         else:
-            start_time = start_time.utcnow()
+            start_time = start_time
         self._span = SpanModel(
             name=name,
             span_type=span_type,
@@ -41,6 +42,8 @@ class Span:
 
     def to_dict(self):
         span_dict = self._span.model_dump()
+        if "input_documents" in self._span.input:
+            self._span.input['input_documents'] = [doc.page_content if isinstance(doc, Document) else doc for doc in self._span.input["input_documents"]]
         span_dict["children"] = [child.to_dict() for child in self._children]
         return span_dict
 
@@ -62,7 +65,7 @@ class Span:
     ):
         span = Span(
             name=name,
-            start_time=start_time,
+            start_time=(start_time or datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)),
             end_time=end_time,
             span_type=span_type,
             status=status,
@@ -162,7 +165,7 @@ class Span:
         attributes: Optional[Dict[str, Any]] = None,
     ):
         if end_time:
-            self._span.end_time = end_time.utcnow()
+            self._span.end_time = end_time.replace(tzinfo=datetime.timezone.utc)
         if status:
             self._span.status = status
         if input:
@@ -175,13 +178,17 @@ class Span:
             self._span.attributes.update(attributes)
 
     def end(self, end_time: Optional[datetime.datetime] = None):
-        end_time = get_utc_end_time(end_time)
-        if self._span.end_time is None:
-            self._span.end_time = end_time.isoformat()
-        if self._span.duration is None:
-            self._span.duration = int((end_time - datetime.datetime.fromisoformat(self._span.start_time)).total_seconds())
-        for child in self._children:
-            child.end(end_time)
+        try:
+            end_time = get_utc_time(end_time)
+            if self._span.end_time is None:
+                self._span.end_time = end_time.replace(tzinfo=datetime.timezone.utc).isoformat()
+            if self._span.duration is None:
+                delta = (end_time - get_utc_time(datetime.datetime.fromisoformat(self._span.start_time)))
+                self._span.duration = int((delta.seconds * 1000) + (delta.microseconds // 1000))
+            for child in self._children:
+                child.end(end_time)
+        except Exception as e:
+            print(f"Error ending span: {e}")
 
 class Generation(Span):
     def __init__(

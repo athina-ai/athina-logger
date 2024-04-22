@@ -9,12 +9,9 @@ def remove_none_values(d):
     else:
         return d
 
-
-def get_utc_end_time(end_time):
-    if end_time is not None:
-        if end_time.tzinfo is None:
-            end_time = end_time.replace(tzinfo=timezone.utc)
-        end_time = end_time.astimezone(timezone.utc)
-    else:
-        end_time = datetime.now(timezone.utc)      
-    return end_time
+def get_utc_time(time_obj=None):
+    if time_obj is None:
+        return datetime.now(timezone.utc)
+    if time_obj.tzinfo is None:
+        time_obj = time_obj.replace(tzinfo=timezone.utc)
+    return time_obj.astimezone(timezone.utc)
