@@ -67,10 +67,10 @@ class CallbackHandler(BaseCallbackHandler, AthinaApiKey):
         **kwargs: Any,
     ) -> Any:
         try:
-            retrieved_documents_data = ''
+            retrieved_documents_data = []
             for document in documents:
                 page_content = document.page_content
-                retrieved_documents_data += page_content + '\n'
+                retrieved_documents_data.append(page_content)
             if self.global_context is None:
                 self.global_context = {}
             self.global_context['documents'] = retrieved_documents_data
