@@ -1,3 +1,6 @@
+import ast
+import json
+import traceback
 import requests
 from typing import List, Optional, Dict, Union, Any
 from .constants import API_BASE_URL
@@ -33,16 +36,17 @@ class InferenceLogger(AthinaApiKey):
         custom_attributes: Optional[Dict] = None,
         custom_eval_metrics: Optional[Dict] = None,
         cost: Optional[float] = None,
+        status_code: Optional[int] = None,
+        error: Optional[Any] = None,
     ) -> None:
         try:
-            args = (prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics)
+            args = (prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics, status_code, error)
             threading.Thread(target=lambda: asyncio.run(InferenceLogger._log_inference_asynchronously(*args))).start()
         except Exception as e:
-            print("Error in logging inference to Athina: ", str(e))
 
     @staticmethod
     async def _log_inference_asynchronously(
-        prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics
+        prompt, response, prompt_slug, language_model_id, environment, functions, function_call_response, tools, tool_calls, external_reference_id, customer_id, customer_user_id, session_id, user_query, prompt_tokens, completion_tokens, total_tokens, response_time, context, expected_response, custom_attributes, cost, custom_eval_metrics, status_code, error
     ) -> None:
         """
         logs the llm inference to athina
@@ -72,11 +76,42 @@ class InferenceLogger(AthinaApiKey):
                 'custom_attributes': custom_attributes,
                 'custom_eval_metrics': custom_eval_metrics,
                 'cost': cost,
+                'status_code': status_code,
+                'error': InferenceLogger._serialize_error(error),
             }
             # Remove None fields from the payload
             payload = {k: v for k, v in payload.items() if v is not None}
-            RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/inference', payload=payload, headers={
+            
+            
+            response = RequestHelper.make_post_request(endpoint=f'{API_BASE_URL}/api/v1/log/inference', payload=payload, headers={
                 'athina-api-key': InferenceLogger.get_api_key(),
             })
         except Exception as e:
             print("Error in logging inference to Athina: ", str(e))
+            traceback.print_exc()
+
+    @staticmethod
+    def _serialize_error(error: Any) -> str:
+        if error is None:
+            return None
+        
+        if isinstance(error, dict):
+            if 'message' in error and isinstance(error['message'], str):
+                try:
+                    # Remove the "Error code: 429 - " prefix
+                    error_str = error['message'].split(' - ', 1)[1]
+                    # Parse the string as a dictionary
+                    error_dict = ast.literal_eval(error_str)
+                    # Extract the inner error message
+                    return error_dict['error']['message']
+                except (IndexError, ValueError, KeyError):
+                    pass
+            return error.get('message', json.dumps(error))
+        
+        if isinstance(error, str):
+            return error
+        
+        if isinstance(error, Exception):
+            return str(error)
+        
+        return str(error)

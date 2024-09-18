@@ -17,17 +17,23 @@ class RequestHelper:
                 json=payload,
                 headers=headers,
             )
+            print(' request response openai')
+            print(response.json())
+            return response
+
             if response.status_code != 200 and response.status_code != 201:
                 response_json = response.json()
                 error_message = response_json.get('error', 'Unknown Error')
                 details_message = response_json.get(
                     'details', {}).get('message', 'No Details')
                 raise CustomException(
-                    response.status_code, f'{error_message}: {details_message}')
+                    response.status_code, f'{response_json}')
         except requests.exceptions.RequestException as e:
-            raise e
+            print(f"Request exception: {e}")
+            return None
         except Exception as e:
-            raise e
+            print(f"Unexpected error: {e}")
+            return None
 
     @staticmethod
     @retry(wait_fixed=100, stop_max_attempt_number=2)
