@@ -30,6 +30,8 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
         external_reference_id = None
         custom_attributes = None
         custom_eval_metrics = None
+        status_code = None
+        error = None
 
         if athina_meta:
             prompt_slug = athina_meta.prompt_slug
@@ -43,6 +45,15 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             external_reference_id = athina_meta.external_reference_id
             custom_attributes = athina_meta.custom_attributes
             custom_eval_metrics = athina_meta.custom_eval_metrics
+            status_code = athina_meta.status_code
+            error = athina_meta.error
+
+        if 'error' in result:
+            error = result['error']
+            status_code = error.get('status_code')
+        else:
+            error = None
+            status_code = None
 
         InferenceLogger.log_inference(
             prompt_slug=prompt_slug,
@@ -59,6 +70,8 @@ def log_to_athina(result: dict, args: dict, athina_meta: AthinaMeta):
             external_reference_id=external_reference_id,
             custom_attributes=custom_attributes,
             custom_eval_metrics=custom_eval_metrics,
+            status_code=status_code,
+            error=error
         )
     except Exception as e:
         print("Exception while logging to Athina: ", e)
@@ -84,7 +97,13 @@ class OpenAiMiddleware:
 
             # Make the OpenAI call and measure response time
             start_time = time.time()
-            openai_response = func(*self._args, **self._kwargs)
+            try:
+                openai_response = func(*self._args, **self._kwargs)
+            except Exception as e:
+                end_time = time.time()
+                response_time_ms = int((end_time - start_time) * 1000)
+                self._log_exception_to_athina(e, response_time_ms)
+                raise
             end_time = time.time()
             response_time_ms = int((end_time - start_time) * 1000)
 
@@ -116,25 +135,59 @@ class OpenAiMiddleware:
     def _response_interceptor(self, response, is_streaming=False,
                             send_response: Callable[[dict], None] = None):
         def generator_intercept_packets():
-            for r in response:
-                self.collect_stream_inference_by_chunk(r)
-                yield r
-            self._log_stream_to_athina()
-
+            try:
+                for r in response:
+                    self.collect_stream_inference_by_chunk(r)
+                    yield r
+                self._log_stream_to_athina()
+            except Exception as e:
+                self._log_exception_to_athina(e)
+                raise
         if is_streaming:
             return generator_intercept_packets()
         else:
-            api_thread = threading.Thread(
-                target=log_to_athina,
-                kwargs={
-                    "result": response if version_numbers < (1, 0, 0) else response.model_dump(),
-                    "args": self._kwargs,
-                    "athina_meta": self._athina_meta,
-                },
-            )
-            api_thread.start()
-            return response
+            try:
+                api_thread = threading.Thread(
+                    target=log_to_athina,
+                    kwargs={
+                        "result": response if version_numbers < (1, 0, 0) else response.model_dump(),
+                        "args": self._kwargs,
+                        "athina_meta": self._athina_meta,
+                    },
+                )
+                api_thread.start()
+                return response
+            except Exception as e:
+                self._log_exception_to_athina(e)
+            raise
+    def _log_exception_to_athina(self, exception, response_time_ms):
+        error_dict = {
+            'message': str(exception),
+            'type': type(exception).__name__,
+            'code': getattr(exception, 'code', None)
+        }
+        if hasattr(exception, 'response'):
+            error_dict['status_code'] = exception.response.status_code
+            error_dict['response'] = exception.response.json()
 
+        if self._athina_meta is not None:
+            self._athina_meta.response_time = response_time_ms
+            self._athina_meta.error = error_dict
+            self._athina_meta.status_code = error_dict.get('status_code')
+        else:
+            self._athina_meta = AthinaMeta(
+                prompt_slug="default",
+                response_time=response_time_ms,
+                environment="default",
+                error=error_dict,
+                status_code=error_dict.get('status_code')
+            )
+
+        log_to_athina(
+            result={'error': error_dict},
+            args=self._kwargs,
+            athina_meta=self._athina_meta
+        )
     def _get_text_from_stream_chunk(self, stream_chunk):
         """
         gets the text from the stream chunk
