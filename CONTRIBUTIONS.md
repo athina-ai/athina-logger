@@ -10,3 +10,8 @@ Then, run
 make build
 ```
 to create the venv and install the requirements in it. 
+
+now you can run the below command to activate your virtual environment. 
+```bash
+source venv/bin/activate 
+```
