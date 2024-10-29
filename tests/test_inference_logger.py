@@ -125,7 +125,7 @@ def test_log_inference_no_model_options(
         ),
     ]
 )
-def test_log_inference_with_model_options(
+def test_log_inference_with_model_options_none(
         language_model_id, prompt, response, user_query, context, prompt_tokens,
         completion_tokens, total_tokens, cost, response_time, prompt_slug, environment,
         customer_id, customer_user_id, session_id, expected_response, tools, tool_calls,
@@ -158,5 +158,5 @@ def test_log_inference_with_model_options(
         function_call_response=function_call_response,
         external_reference_id=external_reference_id,
         custom_attributes=custom_attributes,
-        model_options=model_options
+        model_options=model_options,
     )
