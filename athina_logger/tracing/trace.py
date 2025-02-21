@@ -23,6 +23,8 @@ class Trace(AthinaApiKey):
         end_time: Optional[datetime.datetime] = None,
         status: Optional[str] = None,
         attributes: Optional[dict] = None,
+        input: Optional[dict] = None,
+        output: Optional[dict] = None,
         duration: Optional[int] = None,
         version: Optional[str] = None,
     ):        
@@ -32,6 +34,8 @@ class Trace(AthinaApiKey):
             end_time=end_time.isoformat() if end_time else None,
             status=status,
             attributes=attributes or {},
+            input=input or {},
+            output=output or {},
             duration=duration,
             version=version,
         )

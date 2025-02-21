@@ -1,5 +1,6 @@
 import functools
 import asyncio
+import inspect
 from typing import Optional, Dict, Any, Callable, TypeVar
 from contextvars import ContextVar
 
@@ -12,6 +13,7 @@ current_span = ContextVar('current_span', default=None)
 F = TypeVar('F', bound=Callable)
 
 class ObserveDecorator:
+    
     def trace(
         self,
         name: Optional[str] = None,
@@ -19,6 +21,10 @@ class ObserveDecorator:
         version: Optional[str] = None,
     ):
         def decorator(func: F) -> F:
+            # Get the signature of the function
+            sig = inspect.signature(func)
+            param_names = list(sig.parameters.keys())
+            
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 trace_name = name or func.__name__
@@ -31,24 +37,34 @@ class ObserveDecorator:
                 # Set trace in context
                 token = current_trace.set(trace)
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        trace._trace.attributes.update({
-                            "function_input": {
-                                "args": args,
-                                "kwargs": kwargs
-                            }
-                        })
+                    if input_dict:
+                        trace._trace.input = input_dict
                     
                     result = await func(*args, **kwargs)
                     
                     # Capture output
                     if result is not None:
-                        trace._trace.attributes["function_output"] = result
+                        trace._trace.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if trace._trace.status is None:
+                        trace._trace.status = "success"
+                        
                     return result
                 except Exception as e:
                     trace._trace.status = "error"
+                    if trace._trace.attributes is None:
+                        trace._trace.attributes = {}
                     trace._trace.attributes["error"] = str(e)
                     raise
                 finally:
@@ -67,24 +83,34 @@ class ObserveDecorator:
                 # Set trace in context
                 token = current_trace.set(trace)
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        trace._trace.attributes.update({
-                            "function_input": {
-                                "args": args,
-                                "kwargs": kwargs
-                            }
-                        })
+                    if input_dict:
+                        trace._trace.input = input_dict
                     
                     result = func(*args, **kwargs)
                     
                     # Capture output
                     if result is not None:
-                        trace._trace.attributes["function_output"] = result
+                        trace._trace.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if trace._trace.status is None:
+                        trace._trace.status = "success"
+                        
                     return result
                 except Exception as e:
                     trace._trace.status = "error"
+                    if trace._trace.attributes is None:
+                        trace._trace.attributes = {}
                     trace._trace.attributes["error"] = str(e)
                     raise
                 finally:
@@ -102,6 +128,10 @@ class ObserveDecorator:
         version: Optional[str] = None,
     ):
         def decorator(func: F) -> F:
+            # Get the signature of the function
+            sig = inspect.signature(func)
+            param_names = list(sig.parameters.keys())
+            
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 span_name = name or func.__name__
@@ -138,12 +168,18 @@ class ObserveDecorator:
                 span_token = current_span.set(span)
                 
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        span._span.input = {
-                            "args": args,
-                            "kwargs": kwargs
-                        }
+                    if input_dict:
+                        span._span.input = input_dict
                     
                     result = await func(*args, **kwargs)
                     
@@ -151,15 +187,24 @@ class ObserveDecorator:
                     if result is not None:
                         span._span.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if span._span.status is None:
+                        span._span.status = "success"
+                        
                     return result
                 except Exception as e:
                     span._span.status = "error"
+                    if span._span.attributes is None:
+                        span._span.attributes = {}
                     span._span.attributes["error"] = str(e)
                     raise
                 finally:
                     span.end()
                     current_span.reset(span_token)
                     if trace_token:
+                        # Set success status on trace if not already set
+                        if trace._trace.status is None:
+                            trace._trace.status = "success"
                         trace.end()
                         current_trace.reset(trace_token)
             
@@ -199,12 +244,18 @@ class ObserveDecorator:
                 span_token = current_span.set(span)
                 
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        span._span.input = {
-                            "args": args,
-                            "kwargs": kwargs
-                        }
+                    if input_dict:
+                        span._span.input = input_dict
                     
                     result = func(*args, **kwargs)
                     
@@ -212,15 +263,24 @@ class ObserveDecorator:
                     if result is not None:
                         span._span.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if span._span.status is None:
+                        span._span.status = "success"
+                        
                     return result
                 except Exception as e:
                     span._span.status = "error"
+                    if span._span.attributes is None:
+                        span._span.attributes = {}
                     span._span.attributes["error"] = str(e)
                     raise
                 finally:
                     span.end()
                     current_span.reset(span_token)
                     if trace_token:
+                        # Set success status on trace if not already set
+                        if trace._trace.status is None:
+                            trace._trace.status = "success"
                         trace.end()
                         current_trace.reset(trace_token)
             
@@ -234,6 +294,10 @@ class ObserveDecorator:
         version: Optional[str] = None
     ):
         def decorator(func: F) -> F:
+            # Get the signature of the function
+            sig = inspect.signature(func)
+            param_names = list(sig.parameters.keys())
+            
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 gen_name = name or func.__name__
@@ -268,12 +332,18 @@ class ObserveDecorator:
                 gen_token = current_span.set(generation)
                 
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        generation._span.input = {
-                            "args": args,
-                            "kwargs": kwargs
-                        }
+                    if input_dict:
+                        generation._span.input = input_dict
                     
                     result = await func(*args, **kwargs)
                     
@@ -281,15 +351,24 @@ class ObserveDecorator:
                     if result is not None:
                         generation._span.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if generation._span.status is None:
+                        generation._span.status = "success"
+                        
                     return result
                 except Exception as e:
                     generation._span.status = "error"
+                    if generation._span.attributes is None:
+                        generation._span.attributes = {}
                     generation._span.attributes["error"] = str(e)
                     raise
                 finally:
                     generation.end()
                     current_span.reset(gen_token)
                     if trace_token:
+                        # Set success status on trace if not already set
+                        if trace._trace.status is None:
+                            trace._trace.status = "success"
                         trace.end()
                         current_trace.reset(trace_token)
             
@@ -327,12 +406,18 @@ class ObserveDecorator:
                 gen_token = current_span.set(generation)
                 
                 try:
+                    # Map positional args to their parameter names
+                    args_dict = {}
+                    for i, arg in enumerate(args):
+                        if i < len(param_names):
+                            args_dict[param_names[i]] = arg
+                    
+                    # Combine with keyword args
+                    input_dict = {**args_dict, **kwargs}
+                    
                     # Capture input if available
-                    if args or kwargs:
-                        generation._span.input = {
-                            "args": args,
-                            "kwargs": kwargs
-                        }
+                    if input_dict:
+                        generation._span.input = input_dict
                     
                     result = func(*args, **kwargs)
                     
@@ -340,20 +425,85 @@ class ObserveDecorator:
                     if result is not None:
                         generation._span.output = {"result": result}
                     
+                    # Set success status if not already set
+                    if generation._span.status is None:
+                        generation._span.status = "success"
+                        
                     return result
                 except Exception as e:
                     generation._span.status = "error"
+                    if generation._span.attributes is None:
+                        generation._span.attributes = {}
                     generation._span.attributes["error"] = str(e)
                     raise
                 finally:
                     generation.end()
                     current_span.reset(gen_token)
                     if trace_token:
+                        # Set success status on trace if not already set
+                        if trace._trace.status is None:
+                            trace._trace.status = "success"
                         trace.end()
                         current_trace.reset(trace_token)
             
             return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
         return decorator
+    
+    def update_current_span(
+        self, 
+        input: Optional[Any] = None, 
+        output: Optional[Any] = None,
+        attributes: Optional[Dict[str, Any]] = None,
+        status: Optional[str] = None
+    ):
+        """Update the current span with new information."""
+        span = current_span.get()
+        if span and span._span:
+            if input is not None:
+                span._span.input = input
+            
+            if output is not None:
+                span._span.output = output
+            
+            if attributes is not None:
+                if span._span.attributes is None:
+                    span._span.attributes = {}
+                span._span.attributes.update(attributes)
+            
+            if status is not None:
+                span._span.status = status
+    
+    def update_current_trace(
+        self, 
+        input: Optional[Any] = None, 
+        output: Optional[Any] = None,
+        attributes: Optional[Dict[str, Any]] = None,
+        status: Optional[str] = None
+    ):
+        """Update the current trace with new information."""
+        trace = current_trace.get()
+        if trace and trace._trace:
+            if input is not None:
+                trace._trace.input = input
+            
+            if output is not None:
+                trace._trace.output = output
+            
+            if attributes is not None:
+                if trace._trace.attributes is None:
+                    trace._trace.attributes = {}
+                trace._trace.attributes.update(attributes)
+            
+            if status is not None:
+                trace._trace.status = status
+
+    def get_current_trace(self):
+        """Get the current trace object."""
+        return current_trace.get()
+    
+    def get_current_span(self):
+        """Get the current span object."""
+        return current_span.get()
 
 # Create singleton instance
 observe = ObserveDecorator()
