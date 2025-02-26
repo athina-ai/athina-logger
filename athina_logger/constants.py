@@ -1,6 +1,7 @@
 import os
 # Athina Server Base Url
 API_BASE_URL = os.getenv('API_BASE_URL') or 'https://log.athina.ai'
+
 LOG_INFERENCE_URL = f'{API_BASE_URL}/api/v1/log/inference'
 
 OPENAI_MODEL_ENCODINGS = {

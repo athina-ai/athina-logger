@@ -10,6 +10,8 @@ class TraceModel(BaseModel):
     duration: Optional[int] = None
     status: Optional[str] = None
     attributes: Optional[dict] = None
+    input: Optional[dict] = None
+    output: Optional[dict] = None
     version: Optional[str] = None
 
 class SpanModel(BaseModel):
