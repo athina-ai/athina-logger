@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from .span import Generation, Span
 from .models import TraceModel
-from .util import get_utc_time, remove_none_values
+from .util import get_utc_time, remove_none_values, sanitize_dict
 from athina_logger.api_key import AthinaApiKey
 from athina_logger.constants import API_BASE_URL
 from athina_logger.request_helper import RequestHelper
@@ -189,6 +189,7 @@ class Trace(AthinaApiKey):
                 delta = (end_time - get_utc_time(datetime.datetime.fromisoformat(self._trace.start_time)))
                 self._trace.duration = int((delta.seconds * 1000) + (delta.microseconds // 1000))
             request_dict = remove_none_values(self.to_dict())
+            request_dict = sanitize_dict(request_dict)
             threading.Thread(target=lambda: asyncio.run(self._log_trace_async(request_dict))).start()
         except Exception as e:
             print("Error ending trace: ", e)
