@@ -2,8 +2,9 @@
 name = "athina-logger"
 version = "1.2.9"
 description = ""
-authors = ["Akshat Gupta <akshat@athina.ai>", "Shiv Sakhuja <shiv@athina.ai>", "Akhil Bisht <akhil@athina.ai>", "Vivek Aditya <vivek@athina.ai>"]
+authors = ["Shiv Sakhuja <shiv@athina.ai>", "Akhil Bisht <akhil@athina.ai>", "Vivek Aditya <vivek@athina.ai>"]
 readme = "README.md"
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
